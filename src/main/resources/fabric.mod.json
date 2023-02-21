@@ -1,29 +1,29 @@
 {
   "schemaVersion": 1,
-  "id": "modid",
+  "id": "imyvmescc",
   "version": "${version}",
 
-  "name": "Example Mod",
+  "name": "Imyvm_ESCC_Plugin",
   "description": "This is an example description! Tell everyone what your mod is about!",
   "authors": [
-    "Me!"
+    "Imyvm Debug Group"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://imyvm.org/",
+    "sources": "https://github.com/Dream-Rainy/ImyvmESCCPlugin"
   },
 
   "license": "CC0-1.0",
-  "icon": "assets/modid/icon.png",
+  "icon": "assets/imyvmescc/icon.png",
 
   "environment": "*",
   "entrypoints": {
     "main": [
-      "net.fabricmc.example.ExampleMod"
+      "org.imyvm.imyvmesccplugin.ESCCMain"
     ]
   },
   "mixins": [
-    "modid.mixins.json"
+    "imyvmescc.mixins.json"
   ],
 
   "depends": {
