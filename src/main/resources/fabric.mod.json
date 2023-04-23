@@ -1,36 +1,41 @@
 {
   "schemaVersion": 1,
-  "id": "imyvmescc",
+  "id": "imyvm-villagershop",
   "version": "${version}",
 
-  "name": "Imyvm_ESCC_Plugin",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "name": "Imyvm_villagerShop_Plugin",
+  "description": "",
   "authors": [
-    "Imyvm Debug Group"
+    "Imyvm-Debug-Group"
   ],
   "contact": {
-    "homepage": "https://imyvm.org/",
-    "sources": "https://github.com/Dream-Rainy/ImyvmESCCPlugin"
+    "sources": "https://github.com/Dream-Rainy/ImyvmVillagerShop"
   },
 
-  "license": "CC0-1.0",
-  "icon": "assets/imyvmescc/icon.png",
+  "license": "",
 
   "environment": "*",
   "entrypoints": {
     "main": [
-      "org.imyvm.imyvmesccplugin.ESCCMain"
+      {
+        "adapter": "kotlin",
+        "value": "com.imyvm.villagerShop.VillagerShopMain"
+      }
     ]
   },
   "mixins": [
-    "imyvmescc.mixins.json"
+    "imyvmvillagershop.mixins.json"
   ],
 
   "depends": {
-    "fabricloader": ">=0.14.9",
-    "fabric-api": "*",
+    "fabricloader": ">=0.14.6",
+    "fabric": "*",
     "minecraft": "~1.19",
-    "java": ">=17"
+    "java": ">=17",
+    "fabric-permissions-api-v0": "*",
+    "hoki": ">=1.0.0",
+    "imyvm_economy": "~1.2.3",
+    "fabric-language-kotlin": ">=1.9.3+kotlin.1.8.20"
   },
   "suggests": {
     "another-mod": "*"
