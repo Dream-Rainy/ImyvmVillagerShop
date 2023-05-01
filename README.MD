@@ -21,14 +21,14 @@ core {
 ## 二、商店创建
 ### 1.玩家商店
 玩家可以使用指令`/villagershop create shop <shopname> <x y z> <item> <count> <price>`创建商店[^1]，并扣除一定的货币。  
-货币的花费会随着玩家拥有商店数量的增加而增加，函数表达式为：  
-$$
+货币的花费会随着玩家拥有商店数量的增加而增加，函数表达式为:
+```math
 f(x)
 \begin{cases}
 40, &x\ \le\ 3\\
 10\times2^{x-1}, &x\ \gt\ 3
 \end{cases}
-$$  
+```
 **注意**
 - 商店刚创建或商品刚添加时商品的库存为0，你需要在创建完成后额外使用`/villagershop item addstock <shopname> <item> [count]`来进行“补货”，`count`是一个可选参数，若不填则默认消耗背包内所有特定物品。  
 同时，补货需要消耗一定的货币，计算公式如下：
