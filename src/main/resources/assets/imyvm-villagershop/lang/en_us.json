@@ -14,6 +14,7 @@
   "commands.balance.consume": "This operation cost {0} $",
   "commands.imyvm_villager_shop.reload.success": "Configuration reloaded",
   "commands.imyvm_villager_shop.tax_change.success": "Tax rate modified successfully",
+  "commands.confirm.already.have": "You already have an operation waiting for confirmation, please confirm or cancel first",
   "commands.confirm.ok": "Operation confirmed",
   "commands.confirm.none": "No action pending",
   "commands.cancel.ok": "Operation canceled",

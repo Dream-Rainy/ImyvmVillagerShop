@@ -43,21 +43,21 @@ f(x) = p \times c \times t
 ### 2.系统商店
 管理员可以使用指令`/villagershop create adminshop <shopname> <x y z> <item1> <count>:<price> <item2> <count>:<price> ... <item_n> <count>:<price>`来创建系统商店。  
 系统商店库存**无限**，但是可以根据情况限制单个玩家的购买数量。  
-### 3.商店管理
-##### ①货物设置
+## 三、商店管理
+### 1.货物设置
 在商店创建成功后，玩家可以使用`/villagershop item add <shopname> <item> <count> <price>`来添加商品，使用`/villagershop item change <shopname> <item> <count> <price>`来修改**已有**商品的价格以及出售数量，使用`/villagershop item delete <shopname> <item>`来删除已有的商品[^1]  
-##### ②商店设置
+### 2.商店设置
 玩家可以使用`/villagershop manager info set <shopname> {shopnamenew,x y z}`来修改商店的名称或者位置。当你不想要该商店时，可以使用`/villagershop delete {shopname,shopnumber}`[^1]来删除该商店，管理员可以使用`shopnumber`删除任意不符合规定的商店，无需提前通知拥有者。删除商店会返还所有的库存，但是并不会返还创建时消耗的货币。  
 同时，管理员可以使用`/villagershop manager search {shopname:shopname, location:location, owner:owner}`，owner参数暂时只允许使用玩家的uuid，可以使用`/villagershop manager inquire <shopnumber>`获取特定商店的详细信息。    
 管理员在征得玩家以及管理组同意的情况下，可以使用`/villagershop setAdmin <shopnumber>`[^1]来将该商店转化为系统商店。  
-### 4.收购相关
+## 四、收购相关
 服务器在特定时间（如每半小时）就系统商店中已在出售的一种物品发起一次收购，拥有物品的玩家可以使用`/villagershop sell <count>`出售指定数量的收购物品，达到收购数量后服务器停止收购。  
 收购价格为系统商店在售价格的**80%**  
-
-TODO：  
+## 五、其他
+### TODO：  
  - [ ] 商店创建时即消耗背包内的物品补货   
  - [ ] 补货时可以从玩家身上的潜影盒中获取所需物品   
  - [ ] 支持范围搜索商店，以及通过玩家名称搜索商店，搜索结果添加所满足条件，不输出重复结果。
  - [ ] 完成收购指令以及商店的实体创建。
 
-[^1]: 对于这种指令，你需要使用`/villagershop confirm`来确定执行。
+[^1]: 对于这种指令，你需要使用`/villagershop confirm`来确定执行。同时，你可以使用`/villagershop cancel`来取消操作，所有操作在60s后都会自动取消。并且，在执行下一个需要确认的操作前，你需要先确认已有的操作。

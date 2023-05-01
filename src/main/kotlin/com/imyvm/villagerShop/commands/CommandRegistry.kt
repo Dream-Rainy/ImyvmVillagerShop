@@ -310,9 +310,13 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
 private fun addPendingOperation(context: CommandContext<ServerCommandSource>, operation: () -> Unit) {
     val player = context.source.player!!
     val playerUUID = player.uuid
-    pendingOperations[playerUUID] = PendingOperation(playerUUID, operation)
-    player.sendMessage(tr("commands.confirm.need"))
-    coroutineScope(context)
+    if (pendingOperations.containsKey(playerUUID)) {
+        context.source.sendError(tr("commands.confirm.already.have"))
+    } else {
+        pendingOperations[playerUUID] = PendingOperation(playerUUID, operation)
+        player.sendMessage(tr("commands.confirm.need"))
+        coroutineScope(context)
+    }
 }
 
 private fun cancelOperation(playerUUID: UUID): Boolean {
