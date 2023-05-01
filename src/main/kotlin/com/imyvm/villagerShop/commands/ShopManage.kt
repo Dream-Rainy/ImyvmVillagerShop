@@ -3,6 +3,7 @@ package com.imyvm.villagerShop.commands
 import com.imyvm.economy.EconomyMod
 import com.imyvm.economy.Translator
 import com.imyvm.villagerShop.apis.DataBase
+import com.imyvm.villagerShop.apis.DataSaveOperation
 import com.imyvm.villagerShop.apis.Translator.tr
 import com.imyvm.villagerShop.apis.checkParameterLegality
 import com.mojang.brigadier.Command
@@ -155,8 +156,11 @@ fun shopSetAdmin(
     number: Int
 ){
     val player = context.source.player!!
-    DataBase().dataBaseChange(targetValueInt = number)
-    player.sendMessage(tr("commands.setadmin.ok"))
+    if (DataBase().dataBaseChange(targetValueInt = number, operation = DataSaveOperation.ADMIN) == 1){
+        context.source.sendFeedback(tr("commands.setadmin.ok"),true)
+    } else {
+        context.source.sendFeedback(tr("commands.shops.none"),true)
+    }
 }
 
 fun shopInfoChange(
@@ -166,10 +170,17 @@ fun shopInfoChange(
     shopname: String = "",
     blockPos: BlockPos = BlockPos(0,0,0)
 ) :Int {
-    val playerUUID = context.source.player!!.uuidAsString
-    when (infoname){
-        "shopname" -> DataBase().dataBaseChange(targetValue = shopname, shopNameNew = shopnameNew, playerUUID = playerUUID)
-        "pos" -> DataBase().dataBaseChange(targetValue = shopname, blockPos = blockPos, playerUUID = playerUUID)
+    val player = context.source.player!!
+    val playerUUID = player.uuidAsString
+    val result = when (infoname){
+        "shopname" -> DataBase().dataBaseChange(targetValue = shopname, shopNameNew = shopnameNew, playerUUID = playerUUID, operation = DataSaveOperation.SHOPNAME)
+        "pos" -> DataBase().dataBaseChange(targetValue = shopname, blockPos = blockPos, playerUUID = playerUUID, operation = DataSaveOperation.POS)
+        else -> 114514
+    }
+    if (result == -1){
+        player.sendMessage(tr("commands.shops.none"))
+    } else {
+        player.sendMessage(tr("commands.shopinfo.change.success"))
     }
     return Command.SINGLE_SUCCESS
 }

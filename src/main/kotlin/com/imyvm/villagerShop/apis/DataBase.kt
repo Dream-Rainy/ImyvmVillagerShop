@@ -18,6 +18,12 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
+enum class ItemOperation {
+    ADD, DELETE, CHANGE
+}
+enum class DataSaveOperation {
+    SHOPNAME,ITEM,ADMIN,POS
+}
 @Serializable
 data class Items(val item: String, val count: Int, val price: Int, val stock: Int = 0)
 
@@ -118,17 +124,15 @@ class DataBase {
             }
         }
 
-        dataBaseChange(Shops.shopname, shopname, sellItemListNew, playerUUID = playerUUID)
+        if (dataBaseChange(Shops.shopname, shopname, sellItemListNew, playerUUID = playerUUID, operation = DataSaveOperation.ITEM)==-1) {
+            return "commands.shops.none"
+        }
 
         return when (operation) {
             ItemOperation.ADD -> "commands.shop.item.add.success"
             ItemOperation.DELETE -> "commands.shop.item.delete.success"
             ItemOperation.CHANGE -> "commands.shop.item.change.success"
         }
-    }
-
-    enum class ItemOperation {
-        ADD, DELETE, CHANGE
     }
 
     private fun dataBaseSave(shopname: String, pos: String, items: String, owner: String, admin: Int = 0) {
@@ -175,37 +179,32 @@ class DataBase {
         targetValue: String = "",
         sellItemListNew: MutableList<Items> = mutableListOf(),
         shopNameNew: String = "",
-        targetInt: Column<EntityID<Int>> = Shops.id, targetValueInt: Int = -1,
+        targetInt: Column<EntityID<Int>> = Shops.id,
+        targetValueInt: Int = -1,
         playerUUID: String = "",
-        blockPos: BlockPos = BlockPos(0,0,0)) {
-        if (shopNameNew != ""){
-            transaction(DbSettings.db) {
-                SchemaUtils.create(Shops)
-                Shops.update ({ target eq targetValue and (Shops.owner eq playerUUID) }) {
-                    it[shopname] = shopNameNew
+        blockPos: BlockPos = BlockPos(0, 0, 0),
+        operation: DataSaveOperation
+    ): Int {
+        val condition: Op<Boolean> = when {
+            targetInt == Shops.id -> { targetInt eq targetValueInt }
+            blockPos != BlockPos(0, 0, 0) -> { Shops.pos eq blockPosToString(blockPos) and (Shops.owner eq playerUUID) }
+            else -> { target eq targetValue and (Shops.owner eq playerUUID) }
+        }
+
+        val numberOfRowsUpdated = transaction(DbSettings.db) {
+            SchemaUtils.create(Shops)
+            Shops.update({condition}) {
+                when (operation) {
+                    DataSaveOperation.SHOPNAME -> it[shopname] = shopNameNew
+                    DataSaveOperation.ITEM -> it[items] = Json.encodeToString(serializer, sellItemListNew)
+                    DataSaveOperation.ADMIN -> it[admin] = 1
+                    DataSaveOperation.POS -> it[pos] = blockPosToString(blockPos)
                 }
             }
-        }else if (sellItemListNew.isNotEmpty()){
-            transaction(DbSettings.db) {
-                SchemaUtils.create(Shops)
-                Shops.update ({ target eq targetValue and (Shops.owner eq playerUUID) }) {
-                    it[items] = Json.encodeToString(serializer,sellItemListNew)
-                }
-            }
-        } else if (targetValueInt != -1) {
-            transaction(DbSettings.db) {
-                SchemaUtils.create(Shops)
-                Shops.update ({ targetInt eq targetValueInt }) {
-                    it[admin] = 1
-                }
-            }
-        } else {
-            transaction(DbSettings.db) {
-                SchemaUtils.create(Shops)
-                Shops.update ({ Shops.pos eq blockPosToString(blockPos) and (Shops.owner eq playerUUID) }){
-                    it[pos] = blockPosToString(blockPos)
-                }
-            }
+        }
+        return when (numberOfRowsUpdated) {
+            0 -> -1
+            else -> 1
         }
     }
 
@@ -223,7 +222,7 @@ class DataBase {
                         if (data == uuid){
                             Shops.deleteWhere { targetString eq targetValueString and (owner eq data) }
                         } else {
-                            returnMessage = "commands.deleteshop.none"
+                            returnMessage = "commands.shops.none"
                         }
                     }
                 }
