@@ -24,6 +24,9 @@ enum class ItemOperation {
 enum class DataSaveOperation {
     SHOPNAME,ITEM,ADMIN,POS
 }
+enum class SearchOperation {
+    ID,SHOPNAME,LOCATION,OWNER,ADMIN
+}
 @Serializable
 data class Items(val item: String, val count: Int, val price: Int, val stock: Int = 0)
 
@@ -44,7 +47,10 @@ class DataBase {
         val shopname = varchar("shopname", 20)
         val owner = varchar("owner", 40)
         val admin = integer("admin")
-        val pos = varchar("pos", 255)
+        val posX = integer("posX")
+        val posY = integer("posY")
+        val posZ = integer("posZ")
+        val world = varchar("world", 100)
         val items = text("items")
     }
 
@@ -52,9 +58,10 @@ class DataBase {
         sellItemList: MutableList<Items>,
         shopname: String,
         pos: BlockPos,
-        uuid: String
+        owner: String,
+        worldUUID: String
     ): String {
-        dataBaseSave(shopname, blockPosToString(pos), Json.encodeToString(serializer,sellItemList), uuid,1)
+        dataBaseSave(shopname, pos, worldUUID, Json.encodeToString(serializer,sellItemList), owner,1)
         return "commands.shop.create.success"
     }
 
@@ -62,12 +69,14 @@ class DataBase {
         item: ItemStackArgument,
         count: Int,
         price: Int,
+        stock: Int,
         shopname: String,
         pos: BlockPos,
-        uuid: String
+        owner: String,
+        worldUUID: String
     ): String {
-        val sellItemList = mutableListOf(Items(item.asString(),count,price))
-        dataBaseSave(shopname, blockPosToString(pos), Json.encodeToString(serializer,sellItemList), uuid)
+        val sellItemList = mutableListOf(Items(item.asString(),count,price,stock))
+        dataBaseSave(shopname, pos, worldUUID, Json.encodeToString(serializer,sellItemList), owner)
         return "commands.shop.create.success"
     }
 
@@ -77,10 +86,10 @@ class DataBase {
         count: Int = 0,
         price: Int = 0,
         stock: Int = 0,
-        playerUUID: String,
+        playerName: String,
         operation: ItemOperation
     ): String {
-        val sellItemList = dataBaseInquire(targetValueString = shopname)
+        val sellItemList = dataBaseInquire(targetValueString = shopname, operation = SearchOperation.SHOPNAME, playerName = playerName)
         val sellItemListNew = mutableListOf<Items>()
         var itemCount = 0
 
@@ -98,6 +107,8 @@ class DataBase {
                         for (j in currentItem){
                             if (j.item != item?.asString()) {
                                 sellItemListNew.add(j)
+                            } else {
+                                itemCount = j.stock
                             }
                         }
                     }
@@ -123,24 +134,30 @@ class DataBase {
                 sellItemListNew.add(Items(item!!.asString(), count, price))
             }
         }
+        if (operation == ItemOperation.DELETE && itemCount == 0) {
+            return "commands.shop.item.none"
+        }
 
-        if (dataBaseChange(Shops.shopname, shopname, sellItemListNew, playerUUID = playerUUID, operation = DataSaveOperation.ITEM)==-1) {
+        if (dataBaseChange(Shops.shopname, shopname, sellItemListNew, playerName = playerName, operation = DataSaveOperation.ITEM)==-1) {
             return "commands.shops.none"
         }
 
         return when (operation) {
             ItemOperation.ADD -> "commands.shop.item.add.success"
-            ItemOperation.DELETE -> "commands.shop.item.delete.success"
+            ItemOperation.DELETE -> "commands.shop.item.delete.success,${itemCount}"
             ItemOperation.CHANGE -> "commands.shop.item.change.success"
         }
     }
 
-    private fun dataBaseSave(shopname: String, pos: String, items: String, owner: String, admin: Int = 0) {
+    private fun dataBaseSave(shopname: String, pos: BlockPos, worldUUID:String, items: String, owner: String, admin: Int = 0) {
         transaction(DbSettings.db) {
             SchemaUtils.create(Shops)
             Shops.insert {
                 it[Shops.shopname] = shopname
-                it[Shops.pos] = pos
+                it[posX] = pos.x
+                it[posY] = pos.y
+                it[posZ] = pos.z
+                it[world] = worldUUID
                 it[Shops.items] = items
                 it[Shops.owner] = owner
                 it[Shops.admin] = admin
@@ -150,26 +167,46 @@ class DataBase {
 
     fun dataBaseInquire(
         targetString: Column<String> = Shops.shopname, targetValueString: String = "",
-        targetInt: Column<EntityID<Int>> = Shops.id, targetValueInt: Int = -1): MutableList<String> {
+        targetInt: Column<EntityID<Int>> = Shops.id, targetValueInt: Int = -1,
+        range: Int = -1,operation: SearchOperation,
+        playerName: String = "",
+    ): MutableList<String> {
         val shopInfo = mutableListOf<String>()
         fun processRow(row: ResultRow) {
             shopInfo.apply {
                 add("id:" + row[Shops.id])
                 add("shopname:" + row[Shops.shopname])
-                add("pos:" + stringToBlockPos(row[Shops.pos]))
+                add("pos:" + stringToBlockPos("${row[Shops.posX]},${row[Shops.posY]},${row[Shops.posZ]}"))
                 add("admin:" + row[Shops.admin])
-                add("ownerUUID:" + row[Shops.owner])
+                add("ownerName:" + row[Shops.owner])
                 add("items:" + row[Shops.items])
             }
         }
 
         transaction(DbSettings.db) {
             SchemaUtils.create(Shops)
-            if (targetValueString != "") {
-                Shops.select { targetString eq targetValueString }.forEach(::processRow)
-            } else {
-                Shops.select { targetInt eq targetValueInt }.forEach(::processRow)
+            val query = when (operation) {
+                SearchOperation.ID -> Shops.select { targetInt eq targetValueInt }
+                SearchOperation.SHOPNAME -> {
+                    if (playerName ==""){
+                        Shops.select { targetString eq targetValueString }
+                    } else {
+                        Shops.select { targetString eq targetValueString and (Shops.owner eq playerName) }
+                    }
+                }
+                SearchOperation.LOCATION -> {
+                    val (x, y, z) = targetValueString.split(",").map { it.toInt() }
+                    Shops.select {
+                        (Shops.posX.between(x - range , x + range) and
+                                (Shops.posY.between(y - range, y + range)) and
+                                (Shops.posZ.between(z - range, z + range))
+                                )
+                    }
+                }
+                SearchOperation.OWNER -> Shops.select { targetString eq targetValueString }
+                SearchOperation.ADMIN -> Shops.select { Shops.admin eq 1}
             }
+            query.forEach(::processRow)
         }
         return shopInfo
     }
@@ -181,14 +218,14 @@ class DataBase {
         shopNameNew: String = "",
         targetInt: Column<EntityID<Int>> = Shops.id,
         targetValueInt: Int = -1,
-        playerUUID: String = "",
+        playerName: String = "",
         blockPos: BlockPos = BlockPos(0, 0, 0),
         operation: DataSaveOperation
     ): Int {
         val condition: Op<Boolean> = when {
             targetInt == Shops.id -> { targetInt eq targetValueInt }
-            blockPos != BlockPos(0, 0, 0) -> { Shops.pos eq blockPosToString(blockPos) and (Shops.owner eq playerUUID) }
-            else -> { target eq targetValue and (Shops.owner eq playerUUID) }
+            blockPos != BlockPos(0, 0, 0) -> { Shops.posX eq blockPos.x and (Shops.posY eq blockPos.y) and (Shops.posZ eq blockPos.z) and (Shops.owner eq playerName) }
+            else -> { target eq targetValue and (Shops.owner eq playerName) }
         }
 
         val numberOfRowsUpdated = transaction(DbSettings.db) {
@@ -198,7 +235,11 @@ class DataBase {
                     DataSaveOperation.SHOPNAME -> it[shopname] = shopNameNew
                     DataSaveOperation.ITEM -> it[items] = Json.encodeToString(serializer, sellItemListNew)
                     DataSaveOperation.ADMIN -> it[admin] = 1
-                    DataSaveOperation.POS -> it[pos] = blockPosToString(blockPos)
+                    DataSaveOperation.POS -> {
+                        it[posX] = blockPos.x
+                        it[posY] = blockPos.y
+                        it[posZ] = blockPos.z
+                    }
                 }
             }
         }
@@ -209,17 +250,17 @@ class DataBase {
     }
 
     fun dataBaseDelete(
-        targetString: Column<String> = Shops.shopname, targetValueString: String = "", uuid: String = "",
+        targetString: Column<String> = Shops.shopname, targetValueString: String = "", name: String = "",
         targetInt: Column<EntityID<Int>> = Shops.id, targetValueInt: Int = -1
     ): String {
         var returnMessage = "commands.deleteshop.ok"
         transaction(DbSettings.db) {
             SchemaUtils.create(Shops)
             if (targetValueString != ""){
-                for(i in dataBaseInquire(targetValueString = targetValueString)){
+                for(i in dataBaseInquire(targetValueString = targetValueString, operation = SearchOperation.SHOPNAME)){
                     val (type,data) = i.split(":", limit = 2)
-                    if (type == "ownerUUID"){
-                        if (data == uuid){
+                    if (type == "ownerName"){
+                        if (data == name){
                             Shops.deleteWhere { targetString eq targetValueString and (owner eq data) }
                         } else {
                             returnMessage = "commands.shops.none"
@@ -231,10 +272,6 @@ class DataBase {
             }
         }
         return returnMessage
-    }
-
-    private fun blockPosToString(blockPos: BlockPos): String {
-        return "${blockPos.x},${blockPos.y},${blockPos.z}"
     }
 
     private fun stringToBlockPos(blockPosString: String): BlockPos {

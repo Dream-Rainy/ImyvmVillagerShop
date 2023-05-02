@@ -10,6 +10,7 @@ import com.mojang.brigadier.arguments.DoubleArgumentType.getDouble
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.arguments.StringArgumentType.*
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import kotlinx.coroutines.cancel
 import me.lucko.fabric.api.permissions.v0.Permissions
@@ -33,6 +34,24 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
              environment: CommandManager.RegistrationEnvironment){
         val builder = literal("villagershop")
         .requires(ServerCommandSource::isExecutedByPlayer)
+            .then(literal("sell")
+                .executes { context ->
+                    itemPurchase(
+                        context,
+                        -1,
+                        registryAccess
+                    )
+                }
+                .then(argument("count", integer(1))
+                    .executes { context ->
+                        itemPurchase(
+                            context,
+                            getInteger(context,"count"),
+                            registryAccess
+                        )
+                    }
+                )
+            )
             .then(literal("create")
                 .then(literal("adminshop")
                     .requires(Permissions.require(VillagerShopMain.MOD_ID + ".admin", 3))
@@ -138,7 +157,8 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             val action = {
                                 shopDelete(
                                     context,
-                                    number = getInteger(context,"number")
+                                    number = getInteger(context,"number"),
+                                    registryAccess = registryAccess
                                 )
                             }
                             addPendingOperation(context,action)
@@ -150,7 +170,8 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             val action = {
                                 shopDelete(
                                     context,
-                                    shopname = getString(context,"shopname")
+                                    shopname = getString(context,"shopname"),
+                                    registryAccess = registryAccess
                                 )
                             }
                             addPendingOperation(context,action)
@@ -304,7 +325,8 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                     1
                 }
             )
-    dispatcher.register(builder)
+    val VillagerShopCommandNode = dispatcher.register(builder)
+    dispatcher.register(literal("vlsp").redirect(VillagerShopCommandNode))
 }
 
 private fun addPendingOperation(context: CommandContext<ServerCommandSource>, operation: () -> Unit) {
