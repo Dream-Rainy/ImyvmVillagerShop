@@ -62,11 +62,13 @@ dependencies {
 	modImplementation("com.imyvm:imyvm-economy:${project["imyvm_economy_version"]}")
 
 	modImplementation("net.fabricmc:fabric-language-kotlin:${project["fabric_kotlin_version"]}")
+	modImplementation("me.lucko:fabric-permissions-api:0.2-SNAPSHOT")
 	implementation("org.jetbrains.exposed:exposed-core:${project["exposed_version"]}")
 	implementation("org.jetbrains.exposed:exposed-dao:${project["exposed_version"]}")
 	implementation("org.jetbrains.exposed:exposed-jdbc:${project["exposed_version"]}")
 	implementation("org.postgresql:postgresql:${project["postgresql_version"]}")
 	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project["kotlinx-serialization-json_version"]}")
+	implementation("com.typesafe:config:1.4.2")
 	// Uncomment the following line to enable the deprecated Fabric API modules. 
 	// These are included in the Fabric API production distribution and allow you to update your mod to the latest modules at a later more convenient time.
 

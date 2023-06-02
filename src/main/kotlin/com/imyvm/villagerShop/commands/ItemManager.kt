@@ -1,11 +1,12 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.economy.EconomyMod
-import com.imyvm.villagerShop.apis.Translator.tr
+import com.imyvm.villagerShop.VillagerShopMain.Companion.ADMIN
 import com.imyvm.villagerShop.apis.DataBase
 import com.imyvm.villagerShop.apis.ItemOperation
 import com.imyvm.villagerShop.apis.ModConfig
 import com.imyvm.villagerShop.apis.SearchOperation
+import com.imyvm.villagerShop.apis.Translator.tr
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.context.CommandContext
 import net.minecraft.command.argument.ItemStackArgument
@@ -13,6 +14,9 @@ import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.server.command.ServerCommandSource
+import java.io.BufferedWriter
+import java.io.File
+import java.io.FileWriter
 import kotlin.math.min
 
 fun handleItemOperation(
@@ -32,6 +36,9 @@ fun handleItemOperation(
         val stackToAdd = ItemStack(item!!.item,itemCount.toInt())
         inventory.offerOrDrop(stackToAdd)
         return Command.SINGLE_SUCCESS
+    }
+    if (operation == ItemOperation.ADD && message == "commands.shop.create.item.price.toolow"){
+        player.sendMessage(tr(message,item?.item?.name))
     }
     player.sendMessage(tr(message))
     if (operation == ItemOperation.ADD){
@@ -119,6 +126,17 @@ fun itemQuantityAdd(
         )
         player.sendMessage(tr("commands.stock.add.ok",amountToConsume))
         sourceData.addMoney(-amount)
+        ADMIN?.let { admin -> {
+            val adminData = EconomyMod.data.getOrCreate(admin)
+            adminData.addMoney(amount)
+            admin.sendMessage(tr("admin.tax.online",amount))
+            }
+        } ?: run {
+            val file = File("../world/tax.txt")
+            val fileWriter = FileWriter("../world/tax.txt", false)
+            val bufferedWriter = BufferedWriter(fileWriter)
+            bufferedWriter.write((file.readText().toLong() + amount).toString())
+        }
         player.sendMessage(tr("commands.balance.consume",amount))
     } else {
         player.sendMessage(tr("commands.item.lack"))
@@ -136,7 +154,7 @@ fun removeItemFromInventory(player: PlayerEntity, itemToRemove: Item, quantity: 
             val itemsToRemoveFromSlot = min(count, currentItem.count)
             currentItem.decrement(itemsToRemoveFromSlot)
             if (itemsToRemoveFromSlot == count) {
-                break
+                return 1
             } else {
                 count -= itemsToRemoveFromSlot
             }

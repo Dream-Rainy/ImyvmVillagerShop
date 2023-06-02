@@ -35,6 +35,18 @@ class ModConfig : HokiConfig("imyvm_villagershop.conf") {
 
         @JvmField
         @ConfigOption
+        val ADMIN_NAME = Option(
+            "core.admin_name",
+            "Dream__Rain",
+            "Admin name."
+        ) { obj: Config, path: String? ->
+            obj.getString(
+                path
+            )
+        }
+
+        @JvmField
+        @ConfigOption
         val DATABASE_URL = Option(
             "core.database_url",
             "jdbc:postgresql://localhost:12346/imyvmvillagershop",

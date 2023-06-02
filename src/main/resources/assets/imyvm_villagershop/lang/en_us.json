@@ -1,4 +1,6 @@
 {
+  "admin.tax.offline": "Received a total of $ {0}  in taxes while you were offline",
+  "admin.tax.online": "You received a tax of $ {0}",
   "commands.playershop.item.limit": "The player shop only supports up to seven items",
   "commands.shop.create.no_item": "No items found in the parameters entered",
   "commands.shop.create.count_not_equal": "The entered items and prices cannot correspond one-to-one",
@@ -13,7 +15,7 @@
   "commands.item.lack": "You don't have enough items",
   "commands.shop.stock.failed.lack": "You don't have enough banlance to restock",
   "commands.shop.item.none": "The item does not exist",
-  "commands.balance.consume": "This operation cost {0} $",
+  "commands.balance.consume": "This operation cost $ {0}",
   "commands.imyvm_villager_shop.reload.success": "Configuration reloaded",
   "commands.imyvm_villager_shop.tax_change.success": "Tax rate modified successfully",
   "commands.confirm.already.have": "You already have an operation waiting for confirmation, please confirm or cancel first",
@@ -28,13 +30,16 @@
   "commands.shopinfo.shopname": "Shop Name : {0}",
   "commands.shopinfo.pos": "Shop location : ({0})",
   "commands.shopinfo.owner": "Shop owner: {0}",
-  "commands.shopinfo.items": "Shop items :{0} , Count : {1} , Price  : {2} $ , Stock : {3}",
+  "commands.shopinfo.items": "Shop items :{0} , Count : {1} , Price  : $ {2} , Stock : {3}",
   "commands.shopinfo.change.success": "Shop information modified successfully",
   "commands.setadmin.ok": "Shop type modified successfully",
   "commands.deleteshop.ok": "Shop deleted successfully",
   "commands.stock.add.ok": "Successfully consumed {0} item(s) to restock",
   "commands.search.none": "There are no eligible shops",
   "commands.sell.ok": "Successfully sold {0} item(s)",
-  "commands.balance.add": "Your account is now increased by {0} $",
-  "commands.sell.none": "No acquisitions in progress"
+  "commands.balance.add": "Your account is now increased by $ {0}",
+  "commands.sell.none": "No acquisitions in progress",
+  "commands.sell.start": "The acquisition has started. The items purchased this time are: {0}",
+  "commands.sell.finish": "The acquisition has finished.",
+  "commands.shop.create.item.price.toolow": "The price of item {0} is too low"
 }

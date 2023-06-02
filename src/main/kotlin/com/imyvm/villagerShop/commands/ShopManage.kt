@@ -1,7 +1,6 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.economy.EconomyMod
-import com.imyvm.economy.Translator
 import com.imyvm.villagerShop.apis.DataBase
 import com.imyvm.villagerShop.apis.DataSaveOperation
 import com.imyvm.villagerShop.apis.SearchOperation
@@ -14,11 +13,9 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import net.minecraft.command.CommandRegistryAccess
 import net.minecraft.command.argument.ItemStackArgument
 import net.minecraft.item.ItemStack
-import net.minecraft.server.MinecraftServer
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.util.math.BlockPos
-import java.util.*
 
 fun adminShopCreate(
     context: CommandContext<ServerCommandSource>,
@@ -27,14 +24,14 @@ fun adminShopCreate(
     args: String
 ): Int {
     val player = context.source.player
-    val worldUUID = player!!.world.registryKey.value.namespace
+    val worldUUID = player!!.world.registryKey.value.toString()
     val (compare,itemList) = checkParameterLegality(args)
     when (compare) {
         0 -> throw SimpleCommandExceptionType(tr("commands.shop.create.no_item")).create()
         1 -> throw SimpleCommandExceptionType(tr("commands.shop.create.count_not_equal")).create()
         else -> player.sendMessage(tr(DataBase().adminShopCreateSave(itemList,shopname,pos,player.entityName,worldUUID)))
     }
-    spawnInvulnerableVillager(player,pos)
+    spawnInvulnerableVillager(pos,player.world)
     return Command.SINGLE_SUCCESS
 }
 
@@ -44,7 +41,7 @@ fun playerShopCreate(
     pos: BlockPos,
     item: ItemStackArgument,
     count: Int,
-    price: Int,
+    price: Int
 ) {
     val player = context.source.player!!
     val inventory = player.inventory
@@ -57,6 +54,13 @@ fun playerShopCreate(
             return
         }
     }
+    for (i in itemList){
+        val (itemString,serverPrice) = i.split(",")
+        if ((DataBase().stringToItem(itemString) == item.item) && serverPrice.toLong() <= price/count*0.8){
+            player.sendMessage(tr("commands.shop.create.item.price.toolow",item.item.name))
+            return
+        }
+    }
     val amount = if (shopCount.size <3 ){
         40L
     } else {
@@ -66,13 +70,13 @@ fun playerShopCreate(
         player.sendMessage(tr("commands.shop.create.failed.lack"))
         return
     }
-    val worldUUID = player.world.registryKey.value.namespace
+    val worldUUID = player.world.registryKey.value.toString()
     player.sendMessage(tr(DataBase().playerShopCreateSave(item,count,price,inventory.count(item.item),shopname,pos,player.entityName,worldUUID)))
     sourceData.addMoney(-amount)
     player.sendMessage(tr("commands.balance.consume",amount))
     removeItemFromInventory(player,item.item,inventory.count(item.item))
     player.sendMessage(tr("commands.stock.add.ok",inventory.count(item.item)))
-    spawnInvulnerableVillager(player,pos)
+    spawnInvulnerableVillager(pos,player.world)
 }
 
 fun sendMessageByType(type: String, data: String, player: ServerPlayerEntity) {
@@ -98,8 +102,18 @@ fun rangeSearch(
                     "id" -> DataBase().dataBaseInquire(targetInt = DataBase.Shops.id, targetValueInt = parameter.toInt(), operation = SearchOperation.ID)
                     "shopname" -> DataBase().dataBaseInquire(targetString = DataBase.Shops.shopname, targetValueString = parameter, operation = SearchOperation.SHOPNAME)
                     "owner" -> DataBase().dataBaseInquire(targetString = DataBase.Shops.owner, targetValueString = parameter, operation = SearchOperation.OWNER)
-                    "location" -> DataBase().dataBaseInquire(targetValueString = parameter, range = 0,operation = SearchOperation.LOCATION)
-                    "range" -> DataBase().dataBaseInquire(targetValueString = "${player.pos.x},${player.pos.y},${player.pos.z}", range = parameter.toInt(),operation = SearchOperation.LOCATION)
+                    "location" -> DataBase().dataBaseInquire(targetValueString = parameter, operation = SearchOperation.LOCATION, world = player.world.registryKey.toString())
+                    "range" -> {
+                        val (rangeX,rangeY,rangeZ) = parameter.split(",")
+                        DataBase().dataBaseInquire(
+                            targetValueString = "${player.pos.x},${player.pos.y},${player.pos.z}",
+                            rangeX = rangeX.toInt(),
+                            rangeY = rangeY.toInt(),
+                            rangeZ = rangeZ.toInt(),
+                            operation = SearchOperation.LOCATION,
+                            world = player.world.registryKey.toString()
+                        )
+                    }
                     else -> mutableListOf<String>()
                 }
             if (!results.containsAll(temp)) results.addAll(temp)
@@ -121,7 +135,6 @@ fun rangeSearch(
 
 fun shopInfo(
     context: CommandContext<ServerCommandSource>,
-    registryAccess: CommandRegistryAccess,
     number: Int
 ): Int {
     val player = context.source.player!!
@@ -136,8 +149,8 @@ fun shopInfo(
         if (type == "items") {
             val itemInfo = DataBase().stringToJson(data)
             for (j in itemInfo) {
-                val item = DataBase().stringToItemStackArgument(j.item, registryAccess)
-                player.sendMessage(tr("commands.shopinfo.items", item.item, j.count, j.price, j.stock))
+                val item = DataBase().stringToItem(j.item)
+                player.sendMessage(tr("commands.shopinfo.items", item, j.count, j.price, j.stock))
             }
         } else {
             sendMessageByType(type, data, player)
@@ -148,7 +161,6 @@ fun shopInfo(
 
 fun shopDelete(
     context: CommandContext<ServerCommandSource>,
-    registryAccess: CommandRegistryAccess,
     number: Int = -1,
     shopname: String = ""
 ) {
@@ -165,7 +177,8 @@ fun shopDelete(
                 if (type == "items:"){
                     val itemInfo = DataBase().stringToJson(data)
                     for (j in itemInfo){
-                        val stackToAdd = ItemStack(DataBase().stringToItemStackArgument(j.item,registryAccess).item,j.stock)
+                        val item = DataBase().stringToItem(j.item)
+                        val stackToAdd = ItemStack(item,j.stock)
                         inventory.offerOrDrop(stackToAdd)
                     }
                 }

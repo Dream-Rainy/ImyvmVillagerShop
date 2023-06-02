@@ -3,20 +3,22 @@ package com.imyvm.villagerShop.apis
 import com.imyvm.villagerShop.apis.ModConfig.Companion.DATABASE_PASSWORD
 import com.imyvm.villagerShop.apis.ModConfig.Companion.DATABASE_URL
 import com.imyvm.villagerShop.apis.ModConfig.Companion.DATABASE_USER
-import com.mojang.brigadier.StringReader
+import com.imyvm.villagerShop.commands.itemList
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import net.minecraft.command.CommandRegistryAccess
 import net.minecraft.command.argument.ItemStackArgument
-import net.minecraft.command.argument.ItemStackArgumentType
+import net.minecraft.item.Item
+import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
+import net.minecraft.util.registry.Registry
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+
 
 enum class ItemOperation {
     ADD, DELETE, CHANGE
@@ -87,7 +89,7 @@ class DataBase {
         price: Int = 0,
         stock: Int = 0,
         playerName: String,
-        operation: ItemOperation
+        operation: ItemOperation,
     ): String {
         val sellItemList = dataBaseInquire(targetValueString = shopname, operation = SearchOperation.SHOPNAME, playerName = playerName)
         val sellItemListNew = mutableListOf<Items>()
@@ -126,6 +128,12 @@ class DataBase {
         }
 
         if (operation == ItemOperation.ADD) {
+            for (i in itemList){
+                val (itemString,serverPrice) = i.split(",")
+                if ((DataBase().stringToItem(itemString) == item?.item) && serverPrice.toLong() <= price/count*0.8){
+                    return "commands.shop.create.item.price.toolow"
+                }
+            }
             if (itemCount >= 7) {
                 return "commands.playershop.create.limit"
             } else if (sellItemListNew.firstOrNull { it.item == item?.asString() } != null) {
@@ -168,18 +176,20 @@ class DataBase {
     fun dataBaseInquire(
         targetString: Column<String> = Shops.shopname, targetValueString: String = "",
         targetInt: Column<EntityID<Int>> = Shops.id, targetValueInt: Int = -1,
-        range: Int = -1,operation: SearchOperation,
-        playerName: String = "",
+        rangeX: Int = 0,rangeY: Int = 0,rangeZ: Int = 0,
+        operation: SearchOperation,
+        playerName: String = "", world: String = ""
     ): MutableList<String> {
         val shopInfo = mutableListOf<String>()
         fun processRow(row: ResultRow) {
             shopInfo.apply {
-                add("id:" + row[Shops.id])
-                add("shopname:" + row[Shops.shopname])
-                add("pos:" + stringToBlockPos("${row[Shops.posX]},${row[Shops.posY]},${row[Shops.posZ]}"))
-                add("admin:" + row[Shops.admin])
-                add("ownerName:" + row[Shops.owner])
-                add("items:" + row[Shops.items])
+                add("id:${row[Shops.id]}")
+                add("shopname:${row[Shops.shopname]}")
+                add("pos:${row[Shops.posX]},${row[Shops.posY]},${row[Shops.posZ]}")
+                add("world:${row[Shops.world]}")
+                add("admin:${row[Shops.admin]}")
+                add("ownerName:${row[Shops.owner]}")
+                add("items:${row[Shops.items]}")
             }
         }
 
@@ -191,16 +201,15 @@ class DataBase {
                     if (playerName ==""){
                         Shops.select { targetString eq targetValueString }
                     } else {
-                        Shops.select { targetString eq targetValueString and (Shops.owner eq playerName) }
+                        Shops.select { (targetString eq targetValueString) and (Shops.owner eq playerName) }
                     }
                 }
                 SearchOperation.LOCATION -> {
                     val (x, y, z) = targetValueString.split(",").map { it.toInt() }
                     Shops.select {
-                        (Shops.posX.between(x - range , x + range) and
-                                (Shops.posY.between(y - range, y + range)) and
-                                (Shops.posZ.between(z - range, z + range))
-                                )
+                        (Shops.posX.between(x - rangeX , x + rangeX)) and (Shops.posY.between(y - rangeY, y + rangeY)) and
+                                (Shops.posZ.between(z - rangeZ, z + rangeZ)) and
+                                (Shops.world.eq(world))
                     }
                 }
                 SearchOperation.OWNER -> Shops.select { targetString eq targetValueString }
@@ -274,16 +283,14 @@ class DataBase {
         return returnMessage
     }
 
-    private fun stringToBlockPos(blockPosString: String): BlockPos {
+    fun stringToBlockPos(blockPosString: String): BlockPos {
         val coordinates = blockPosString.split(",").map { it.toInt() }
         return BlockPos(coordinates[0], coordinates[1], coordinates[2])
     }
     fun stringToJson(data: String): List<Items> {
         return Json.decodeFromString(data)
     }
-    fun stringToItemStackArgument(itemStackString: String, registryAccess: CommandRegistryAccess): ItemStackArgument {
-        val stringReader = StringReader(itemStackString)
-        val itemStackArgument = ItemStackArgumentType(registryAccess)
-        return itemStackArgument.parse(stringReader)
+    fun stringToItem(itemString: String): Item {
+        return Registry.ITEM[Identifier(itemString)]
     }
 }

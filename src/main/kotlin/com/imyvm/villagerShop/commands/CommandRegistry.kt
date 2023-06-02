@@ -30,24 +30,21 @@ import java.util.concurrent.ConcurrentHashMap
 data class PendingOperation(val playerUuid: UUID, val operation: () -> Unit)
 val pendingOperations = ConcurrentHashMap<UUID, PendingOperation>()
 fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
-             registryAccess: CommandRegistryAccess,
-             environment: CommandManager.RegistrationEnvironment){
+             registryAccess: CommandRegistryAccess){
         val builder = literal("villagershop")
         .requires(ServerCommandSource::isExecutedByPlayer)
             .then(literal("sell")
                 .executes { context ->
                     itemPurchase(
                         context,
-                        -1,
-                        registryAccess
+                        -1
                     )
                 }
                 .then(argument("count", integer(1))
                     .executes { context ->
                         itemPurchase(
                             context,
-                            getInteger(context,"count"),
-                            registryAccess
+                            getInteger(context,"count")
                         )
                     }
                 )
@@ -157,8 +154,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             val action = {
                                 shopDelete(
                                     context,
-                                    number = getInteger(context,"number"),
-                                    registryAccess = registryAccess
+                                    number = getInteger(context,"number")
                                 )
                             }
                             addPendingOperation(context,action)
@@ -170,8 +166,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             val action = {
                                 shopDelete(
                                     context,
-                                    shopname = getString(context,"shopname"),
-                                    registryAccess = registryAccess
+                                    shopname = getString(context,"shopname")
                                 )
                             }
                             addPendingOperation(context,action)
@@ -196,7 +191,6 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                         .executes { context ->
                             shopInfo(
                                 context,
-                                registryAccess,
                                 getInteger(context,"number")
                             )
                         }
