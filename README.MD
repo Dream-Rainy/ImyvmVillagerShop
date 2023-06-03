@@ -2,6 +2,8 @@
 
 ***
 
+[![Lisense](https://img.shields.io/github/license/Dream-Rainy/ImyvmVillagerShop?style=for-the-badge)](https://github.com/Dream-Rainy/ImyvmVillagerShop/blob/1.19/LICENSE)![Build](https://img.shields.io/github/actions/workflow/status/Dream-Rainy/ImyvmVillagerShop/build.yml?style=for-the-badge)
+
 **注意，该库仍在开发状态中，目前仅完成了部分指令的注册以及数据的存取，如有任何想法欢迎提issue，有能力者可以帮忙完善并提出pr。**
 ## 一、配置文件
 文件位置：`config/imyvm_villagershop.conf`
