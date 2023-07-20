@@ -35,7 +35,7 @@
     "fabric-permissions-api-v0": "*",
     "hoki": ">=1.1.4",
     "imyvm_economy": ">=1.2.4",
-    "fabric-language-kotlin": ">=1.9.5+kotlin.1.8.22"
+    "fabric-language-kotlin": ">=1.10.8+kotlin.1.9.0"
   },
   "suggests": {
     "another-mod": "*"
