@@ -25,7 +25,7 @@
   "commands.cancel.none": "No pending operation to cancel",
   "commands.confirm.autocancel": "The pending confirmation operation has been automatically canceled",
   "commands.confirm.need": "Please enter /villagershop confirm to confirm the operation",
-  "commands.range.search.failed": "Wrong input parameter",
+  "commands.range.search.failed": "Wrong input parameter : {0}",
   "commands.shopinfo.id": "Shop Id : {0}",
   "commands.shopinfo.shopname": "Shop Name : {0}",
   "commands.shopinfo.pos": "Shop location : ({0})",
@@ -41,5 +41,6 @@
   "commands.sell.none": "No acquisitions in progress",
   "commands.sell.start": "The acquisition has started. The items purchased this time are: {0}",
   "commands.sell.finish": "The acquisition has finished.",
-  "commands.shop.create.item.price.toolow": "The price of item {0} is too low"
+  "commands.shop.create.item.price.toolow": "The price of item {0} is too low",
+  "commands.execute.success": "Command executed successfully."
 }

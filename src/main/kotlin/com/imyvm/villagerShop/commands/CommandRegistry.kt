@@ -1,8 +1,9 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.villagerShop.VillagerShopMain
-import com.imyvm.villagerShop.apis.coroutineScope
+import com.imyvm.villagerShop.apis.DataBase
 import com.imyvm.villagerShop.apis.Translator.tr
+import com.imyvm.villagerShop.apis.coroutineScope
 import com.imyvm.villagerShop.apis.customScope
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg
@@ -10,7 +11,6 @@ import com.mojang.brigadier.arguments.DoubleArgumentType.getDouble
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.arguments.StringArgumentType.*
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import kotlinx.coroutines.cancel
 import me.lucko.fabric.api.permissions.v0.Permissions
@@ -19,50 +19,37 @@ import net.minecraft.command.argument.BlockPosArgumentType.blockPos
 import net.minecraft.command.argument.BlockPosArgumentType.getBlockPos
 import net.minecraft.command.argument.ItemStackArgumentType.getItemStackArgument
 import net.minecraft.command.argument.ItemStackArgumentType.itemStack
-import net.minecraft.server.command.CommandManager
 import net.minecraft.server.command.CommandManager.argument
 import net.minecraft.server.command.CommandManager.literal
 import net.minecraft.server.command.ServerCommandSource
-import net.minecraft.util.math.BlockPos
-import java.util.UUID
+import net.minecraft.text.Text
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Supplier
 
 data class PendingOperation(val playerUuid: UUID, val operation: () -> Unit)
 val pendingOperations = ConcurrentHashMap<UUID, PendingOperation>()
 fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
-             registryAccess: CommandRegistryAccess){
+             registryAccess: CommandRegistryAccess) {
         val builder = literal("villagershop")
         .requires(ServerCommandSource::isExecutedByPlayer)
-            .then(literal("sell")
-                .executes { context ->
-                    itemPurchase(
-                        context,
-                        -1
-                    )
-                }
-                .then(argument("count", integer(1))
-                    .executes { context ->
-                        itemPurchase(
-                            context,
-                            getInteger(context,"count")
-                        )
-                    }
-                )
-            )
             .then(literal("create")
                 .then(literal("adminshop")
                     .requires(Permissions.require(VillagerShopMain.MOD_ID + ".admin", 3))
                     .then(argument("shopname", string())
                         .then(argument("pos", blockPos())
                             .then(argument("items", greedyString())
+                                .then(argument("type", integer())
                                 .executes { context ->
                                     adminShopCreate(
                                         context,
-                                        getString(context,"shopname"),
-                                        getBlockPos(context,"pos"),
-                                        getString(context,"items")
+                                        getString(context, "shopname"),
+                                        getBlockPos(context, "pos"),
+                                        getString(context, "items"),
+                                        getInteger(context, "type")
                                     )
                                 }
+                                )
                             )
                         )
                     )
@@ -118,30 +105,70 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
             )
             .then(literal("manager")
                 .then(literal("info")
-                    .then(literal("set")
+                    .then(literal("setshopname")
                         .then(argument("shopnameold", string())
-                            .then(literal("shopname")
-                                .then(argument("shopnamenew", string())
-                                    .executes{context ->
-                                        shopInfoChange(
-                                            context,
-                                            "shopname",
-                                            shopname = getString(context,"shopnameold"),
-                                            shopnameNew =  getString(context,"shopnamenew")
-                                        )
+                            .then(argument("shopnamenew", string())
+                                .executes { context ->
+                                    if (DataBase().dataBaseChangeShopnameByShopname(
+                                            getString(context, "shopnameold"),
+                                            getString(context, "shopnamenew"),
+                                            context.source.player!!.entityName
+                                        ) !=0 ) {
+                                        context.source.player?.sendMessage(tr("commands.execute.success"))
+                                    } else {
+                                        context.source.player?.sendMessage(tr("commands.shops.none"))
+                                    }
+                                    1
+                                }
+                            )
+                        )
+                        .then(argument("id", integer())
+                            .then(argument("shopnamenew", string())
+                                .executes { context ->
+                                    if (DataBase().dataBaseChangeShopnameById(
+                                            getInteger(context, "id"),
+                                            getString(context, "shopnamenew")
+                                        ) !=0 ) {
+                                        context.source.player?.sendMessage(tr("commands.execute.success"))
+                                    } else {
+                                        context.source.player?.sendMessage(tr("commands.shops.none"))
+                                    }
+                                    1
+                                }
+                            )
+                        )
+                    )
+                    .then(literal("setshoppos")
+                        .then(literal("id")
+                            .then(argument("id", integer())
+                                .then(argument("newshoppos", blockPos())
+                                    .executes { context ->
+                                        if (DataBase().dataBaseChangePosById(
+                                                getInteger(context, "id"),
+                                                getBlockPos(context, "newshoppos")) !=0 ) {
+                                            context.source.player?.sendMessage(tr("commands.execute.success"))
+                                        } else {
+                                            context.source.player?.sendMessage(tr("commands.shops.none"))
+                                        }
+                                        1
                                     }
                                 )
-                                .then(literal("pos")
-                                    .then(argument("pos", blockPos())
-                                        .executes{context ->
-                                            shopInfoChange(
-                                                context,
-                                                "pos",
-                                                shopname = getString(context,"shopnameold"),
-                                                blockPos = getBlockPos(context,"pos")
-                                            )
+                            )
+                        )
+                        .then(literal("shopname")
+                            .then(argument("shopanme", string())
+                                .then(argument("newshoppos", blockPos())
+                                    .executes { context ->
+                                        if (DataBase().dataBaseChangePosByShopname(
+                                                getString(context, "shopanme"),
+                                                getBlockPos(context, "newshoppos"),
+                                                context.source.player!!.entityName) !=0 ) {
+                                            context.source.player?.sendMessage(tr("commands.execute.success"))
+                                        } else {
+                                            context.source.player?.sendMessage(tr("commands.shops.none"))
                                         }
-                                    )
+                                        1
+                                    }
                                 )
                             )
                         )
@@ -154,7 +181,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             val action = {
                                 shopDelete(
                                     context,
-                                    number = getInteger(context,"number")
+                                    id = getInteger(context,"number")
                                 )
                             }
                             addPendingOperation(context,action)
@@ -299,9 +326,11 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                     val pendingOperation = pendingOperations.remove(playerUUID)
                     if (pendingOperation != null) {
                         pendingOperation.operation()
-                        context.source.sendFeedback(tr("commands.confirm.ok"), false)
+                        val textSupplier = Supplier<Text> { tr("commands.confirm.ok") }
+                        context.source.sendFeedback(textSupplier, false)
                     } else {
-                        context.source.sendFeedback(tr("commands.confirm.none"), false)
+                        val textSupplier = Supplier<Text> { tr("commands.confirm.none") }
+                        context.source.sendFeedback(textSupplier, false)
                     }
                     customScope.cancel()
                     1
@@ -311,9 +340,11 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                 .executes { context ->
                     val playerUUID = context.source.player?.uuid
                     if (pendingOperations.remove(playerUUID) != null) {
-                        context.source.sendFeedback(tr("commands.cancel.ok"), false)
+                        val textSupplier = Supplier<Text> { tr("commands.cancel.ok") }
+                        context.source.sendFeedback(textSupplier, false)
                     } else {
-                        context.source.sendFeedback(tr("commands.cancel.none"), false)
+                        val textSupplier = Supplier<Text> { tr("commands.cancel.none") }
+                        context.source.sendFeedback(textSupplier, false)
                     }
                     customScope.cancel()
                     1

@@ -1,11 +1,9 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.economy.EconomyMod
-import com.imyvm.villagerShop.VillagerShopMain.Companion.ADMIN
+import com.imyvm.villagerShop.TradeType
 import com.imyvm.villagerShop.apis.DataBase
 import com.imyvm.villagerShop.apis.ItemOperation
-import com.imyvm.villagerShop.apis.ModConfig
-import com.imyvm.villagerShop.apis.SearchOperation
 import com.imyvm.villagerShop.apis.Translator.tr
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.context.CommandContext
@@ -14,9 +12,6 @@ import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.server.command.ServerCommandSource
-import java.io.BufferedWriter
-import java.io.File
-import java.io.FileWriter
 import kotlin.math.min
 
 fun handleItemOperation(
@@ -91,25 +86,22 @@ fun itemQuantityAdd(
     } else {
         count
     }
-    for (i in DataBase().dataBaseInquire(targetValueString = shopname, operation = SearchOperation.SHOPNAME)){
-        val (type,data) = i.split(":", limit = 2)
-            if (type == "items"){
-                val itemInfo = DataBase().stringToJson(data)
-                for (j in itemInfo){
-                    if (j.item == item.asString()){
-                        itemCount = j.count
-                        itemPrice = j.price
-                        itemStock = j.stock
-                        break
-                    }
-                }
+    for (i in DataBase().dataBaseInquireByShopname(shopname, player.entityName)) {
+        val itemInfo = DataBase().stringToJson(i.items)
+        for (j in itemInfo){
+            if (j.item == item.asString()){
+                itemCount = j.count
+                itemPrice = j.price
+                itemStock = j.stock
+                break
             }
+        }
     }
     if (itemCount == 0){
-        player.sendMessage(tr("commands.shop.stock.none"))
+        player.sendMessage(tr("commands.shop.item.none"))
         return -1
     }
-    val amount = (itemPrice*amountToConsume*ModConfig.TAX_RATE.value).toLong()
+    val amount = (itemPrice * amountToConsume + itemPrice * amountToConsume * TradeType.STOCK.tax).toLong()
     if (amount > sourceData.money){
         player.sendMessage(tr("commands.shop.stock.failed.lack"))
         return -1
@@ -125,18 +117,7 @@ fun itemQuantityAdd(
             count =itemCount
         )
         player.sendMessage(tr("commands.stock.add.ok",amountToConsume))
-        sourceData.addMoney(-amount)
-        ADMIN?.let { admin -> {
-            val adminData = EconomyMod.data.getOrCreate(admin)
-            adminData.addMoney(amount)
-            admin.sendMessage(tr("admin.tax.online",amount))
-            }
-        } ?: run {
-            val file = File("../world/tax.txt")
-            val fileWriter = FileWriter("../world/tax.txt", false)
-            val bufferedWriter = BufferedWriter(fileWriter)
-            bufferedWriter.write((file.readText().toLong() + amount).toString())
-        }
+        sourceData.addMoney(-amount, TradeType.STOCK)
         player.sendMessage(tr("commands.balance.consume",amount))
     } else {
         player.sendMessage(tr("commands.item.lack"))

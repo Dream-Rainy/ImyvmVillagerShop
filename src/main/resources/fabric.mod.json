@@ -28,14 +28,14 @@
   ],
 
   "depends": {
-    "fabricloader": ">=0.14.6",
+    "fabricloader": ">=0.14.21",
     "fabric": "*",
-    "minecraft": "~1.19",
+    "minecraft": "~1.20.1",
     "java": ">=17",
     "fabric-permissions-api-v0": "*",
-    "hoki": ">=1.0.0",
-    "imyvm_economy": "~1.2.3",
-    "fabric-language-kotlin": ">=1.9.3+kotlin.1.8.20"
+    "hoki": ">=1.1.4",
+    "imyvm_economy": ">=1.2.4",
+    "fabric-language-kotlin": ">=1.9.5+kotlin.1.8.22"
   },
   "suggests": {
     "another-mod": "*"

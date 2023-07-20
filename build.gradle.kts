@@ -38,10 +38,10 @@ repositories {
 		url = uri("https://share.dreamrain.top")
 	}
 
-	maven {
-		name = "JP Mods"
-		url = uri("https://maven.jpcode.dev")
-	}
+	// maven {
+	//	 name = "JP Mods"
+	//	 url = uri("https://maven.jpcode.dev")
+	// }
 
 	// Fabric Permissions Api
 	maven {
@@ -69,9 +69,14 @@ dependencies {
 	implementation("org.jetbrains.exposed:exposed-core:${project["exposed_version"]}")
 	implementation("org.jetbrains.exposed:exposed-dao:${project["exposed_version"]}")
 	implementation("org.jetbrains.exposed:exposed-jdbc:${project["exposed_version"]}")
-	implementation("org.postgresql:postgresql:${project["postgresql_version"]}")
+	implementation("com.mysql:mysql-connector-j:${project["mysql-connector_version"]}")
+	implementation("com.zaxxer:HikariCP:${project["HikariCP_version"]}")
+	implementation("com.impossibl.pgjdbc-ng", "pgjdbc-ng", project["postgresql_version"])
+	implementation("org.xerial:sqlite-jdbc:${project["sqlite-jdbc_version"]}")
+	implementation("com.microsoft.sqlserver:mssql-jdbc:${project["mssql-jdbc_version"]}")
+	implementation("com.oracle.database.jdbc:ojdbc11:${project["ojdbc11_version"]}")
 	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project["kotlinx-serialization-json_version"]}")
-	implementation("com.typesafe:config:1.4.2")
+	implementation("com.typesafe:config:${project["typesafe_version"]}")
 	// Uncomment the following line to enable the deprecated Fabric API modules. 
 	// These are included in the Fabric API production distribution and allow you to update your mod to the latest modules at a later more convenient time.
 

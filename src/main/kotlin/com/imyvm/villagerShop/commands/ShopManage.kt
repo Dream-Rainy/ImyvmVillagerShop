@@ -1,27 +1,32 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.economy.EconomyMod
+import com.imyvm.economy.api.TradeTypeEnum.TradeType
+import com.imyvm.villagerShop.VillagerShopMain
+import com.imyvm.villagerShop.VillagerShopMain.Companion.itemList
 import com.imyvm.villagerShop.apis.DataBase
-import com.imyvm.villagerShop.apis.DataSaveOperation
-import com.imyvm.villagerShop.apis.SearchOperation
+import com.imyvm.villagerShop.apis.Items
+import com.imyvm.villagerShop.apis.ShopInfo
 import com.imyvm.villagerShop.apis.Translator.tr
 import com.imyvm.villagerShop.apis.checkParameterLegality
 import com.imyvm.villagerShop.shops.spawnInvulnerableVillager
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import net.minecraft.command.CommandRegistryAccess
 import net.minecraft.command.argument.ItemStackArgument
 import net.minecraft.item.ItemStack
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.server.network.ServerPlayerEntity
+import net.minecraft.text.Text
 import net.minecraft.util.math.BlockPos
+import java.util.function.Supplier
 
 fun adminShopCreate(
     context: CommandContext<ServerCommandSource>,
     shopname: String,
     pos: BlockPos,
-    args: String
+    args: String,
+    type: Int
 ): Int {
     val player = context.source.player
     val worldUUID = player!!.world.registryKey.value.toString()
@@ -29,9 +34,10 @@ fun adminShopCreate(
     when (compare) {
         0 -> throw SimpleCommandExceptionType(tr("commands.shop.create.no_item")).create()
         1 -> throw SimpleCommandExceptionType(tr("commands.shop.create.count_not_equal")).create()
-        else -> player.sendMessage(tr(DataBase().adminShopCreateSave(itemList,shopname,pos,player.entityName,worldUUID)))
+        else -> player.sendMessage(tr(DataBase().adminShopCreateSave(itemList, shopname, pos, player.entityName, worldUUID, type)))
     }
-    spawnInvulnerableVillager(pos,player.world)
+    if (type == 1) VillagerShopMain.itemList.addAll(itemList)
+    spawnInvulnerableVillager(pos, player.world, itemList, shopname)
     return Command.SINGLE_SUCCESS
 }
 
@@ -46,21 +52,20 @@ fun playerShopCreate(
     val player = context.source.player!!
     val inventory = player.inventory
     val sourceData = EconomyMod.data.getOrCreate(player)
-    val shopCount = DataBase().dataBaseInquire(targetString = DataBase.Shops.owner,targetValueString = player.entityName, operation = SearchOperation.OWNER)
-    for (i in shopCount){
-        val (type,data) = i.split(":")
-        if (type == "shopname" && data == shopname){
-            player.sendMessage(tr("commands.shop.create.failed.duplicate_name"))
-            return
-        }
+
+    if (DataBase().dataBaseInquireByShopname(shopname,player.entityName).isNotEmpty()) {
+        player.sendMessage(tr("commands.shop.create.failed.duplicate_name"))
+        return
     }
-    for (i in itemList){
-        val (itemString,serverPrice) = i.split(",")
-        if ((DataBase().stringToItem(itemString) == item.item) && serverPrice.toLong() <= price/count*0.8){
+
+    for (i in itemList) {
+        if ((DataBase().stringToItem(i.item) == item.item) && i.price.toLong() <= price/count*0.8) {
             player.sendMessage(tr("commands.shop.create.item.price.toolow",item.item.name))
             return
         }
     }
+
+    val shopCount = DataBase().dataBaseInquireByOwner(player.entityName)
     val amount = if (shopCount.size <3 ){
         40L
     } else {
@@ -70,22 +75,23 @@ fun playerShopCreate(
         player.sendMessage(tr("commands.shop.create.failed.lack"))
         return
     }
+
     val worldUUID = player.world.registryKey.value.toString()
     player.sendMessage(tr(DataBase().playerShopCreateSave(item,count,price,inventory.count(item.item),shopname,pos,player.entityName,worldUUID)))
-    sourceData.addMoney(-amount)
-    player.sendMessage(tr("commands.balance.consume",amount))
-    removeItemFromInventory(player,item.item,inventory.count(item.item))
-    player.sendMessage(tr("commands.stock.add.ok",inventory.count(item.item)))
-    spawnInvulnerableVillager(pos,player.world)
+    sourceData.addMoney(-amount, TradeType.DUTY_FREE)
+    player.sendMessage(tr("commands.balance.consume", amount))
+    removeItemFromInventory(player, item.item, inventory.count(item.item))
+    player.sendMessage(tr("commands.stock.add.ok", inventory.count(item.item)))
+    val sellItemList = mutableListOf<Items>()
+    sellItemList.add(Items(item.toString(), count, price, inventory.count(item.item)))
+    spawnInvulnerableVillager(pos, player.world, sellItemList, shopname)
 }
 
-fun sendMessageByType(type: String, data: String, player: ServerPlayerEntity) {
-    when (type) {
-        "id" -> player.sendMessage(tr("commands.shopinfo.id", data))
-        "shopname" -> player.sendMessage(tr("commands.shopinfo.shopname", data))
-        "pos" -> player.sendMessage(tr("commands.shopinfo.pos", data))
-        "ownerUUID" -> player.sendMessage(tr("commands.shopinfo.owner", data))
-    }
+fun sendMessageByType(shopInfo: ShopInfo, player: ServerPlayerEntity) {
+    player.sendMessage(tr("commands.shopinfo.id", shopInfo.id))
+    player.sendMessage(tr("commands.shopinfo.shopname", shopInfo.shopname))
+    player.sendMessage(tr("commands.shopinfo.owner", shopInfo.owner))
+    player.sendMessage(tr("commands.shopinfo.pos", BlockPos(shopInfo.posX, shopInfo.posY, shopInfo.posZ)))
 }
 
 fun rangeSearch(
@@ -93,67 +99,55 @@ fun rangeSearch(
     searchCondition: String,
 ): Int {
     val player = context.source.player!!
-    val results = mutableListOf<String>()
-
+    val results = mutableListOf<ShopInfo>()
     for (i in searchCondition.split(" ")) {
         if (i.contains(":")) {
             val (condition, parameter) = i.split(":", limit = 2)
                 val temp = when (condition) {
-                    "id" -> DataBase().dataBaseInquire(targetInt = DataBase.Shops.id, targetValueInt = parameter.toInt(), operation = SearchOperation.ID)
-                    "shopname" -> DataBase().dataBaseInquire(targetString = DataBase.Shops.shopname, targetValueString = parameter, operation = SearchOperation.SHOPNAME)
-                    "owner" -> DataBase().dataBaseInquire(targetString = DataBase.Shops.owner, targetValueString = parameter, operation = SearchOperation.OWNER)
-                    "location" -> DataBase().dataBaseInquire(targetValueString = parameter, operation = SearchOperation.LOCATION, world = player.world.registryKey.toString())
+                    "id" -> DataBase().dataBaseInquireById(parameter.toInt())
+                    "shopname" -> DataBase().dataBaseInquireByShopname(parameter)
+                    "owner" -> DataBase().dataBaseInquireByOwner(parameter)
+                    "location" -> DataBase().dataBaseInquireByLocation(parameter, 0, 0, 0, player.world.asString())
                     "range" -> {
-                        val (rangeX,rangeY,rangeZ) = parameter.split(",")
-                        DataBase().dataBaseInquire(
-                            targetValueString = "${player.pos.x},${player.pos.y},${player.pos.z}",
-                            rangeX = rangeX.toInt(),
-                            rangeY = rangeY.toInt(),
-                            rangeZ = rangeZ.toInt(),
-                            operation = SearchOperation.LOCATION,
-                            world = player.world.registryKey.toString()
-                        )
+                        val (rangeX,rangeY,rangeZ) = parameter.split(",").map {it.toInt()}
+                        DataBase().dataBaseInquireByLocation(
+                            "${player.pos.x},${player.pos.y},${player.pos.z}",
+                            rangeX, rangeY, rangeZ ,player.world.asString())
                     }
-                    else -> mutableListOf<String>()
+                    else -> mutableListOf<ShopInfo>()
                 }
             if (!results.containsAll(temp)) results.addAll(temp)
-            if (results.isEmpty()) {
-                player.sendMessage(tr("commands.search.none"))
-                return -1
-            }
-            for (j in results) {
-                val (type, data) = j.split(":", limit = 2)
-                sendMessageByType(type, data, player)
-            }
         } else {
-            player.sendMessage(tr("commands.range.search.failed"))
-            return -1
+            player.sendMessage(tr("commands.range.search.failed", i))
         }
+    }
+    if (results.isEmpty()) {
+        player.sendMessage(tr("commands.search.none"))
+        return -1
+    }
+    for (j in results) {
+        sendMessageByType(j, player)
     }
     return Command.SINGLE_SUCCESS
 }
 
 fun shopInfo(
     context: CommandContext<ServerCommandSource>,
-    number: Int
+    id: Int
 ): Int {
     val player = context.source.player!!
-    val results = DataBase().dataBaseInquire(targetInt = DataBase.Shops.id, targetValueInt = number, operation = SearchOperation.ID)
+    val results = DataBase().dataBaseInquireById(id)
     if (results.isEmpty()){
         player.sendMessage(tr("commands.search.none"))
         return -1
     }
 
     for (i in results) {
-        val (type, data) = i.split(":", limit = 2)
-        if (type == "items") {
-            val itemInfo = DataBase().stringToJson(data)
-            for (j in itemInfo) {
-                val item = DataBase().stringToItem(j.item)
-                player.sendMessage(tr("commands.shopinfo.items", item, j.count, j.price, j.stock))
-            }
-        } else {
-            sendMessageByType(type, data, player)
+        sendMessageByType(i, player)
+        val itemInfo = DataBase().stringToJson(i.items)
+        for (j in itemInfo) {
+            val item = DataBase().stringToItem(j.item)
+            player.sendMessage(tr("commands.shopinfo.items", item.defaultStack.toHoverableText(), j.count, j.price, j.stock))
         }
     }
     return Command.SINGLE_SUCCESS
@@ -161,62 +155,40 @@ fun shopInfo(
 
 fun shopDelete(
     context: CommandContext<ServerCommandSource>,
-    number: Int = -1,
+    id: Int = -1,
     shopname: String = ""
 ) {
     val player = context.source.player!!
     val inventory = player.inventory
-    if (number != -1){
-        context.source.sendFeedback(tr(DataBase().dataBaseDelete(name = player.entityName, targetValueInt = number)),true)
+    if (id != -1){
+        val textSupplier = Supplier<Text> { tr(DataBase().dataBaseDeleteById(id)) }
+        context.source.sendFeedback(textSupplier,true)
     } else {
-        val itemList = DataBase().dataBaseInquire(playerName = player.entityName, operation = SearchOperation.SHOPNAME, targetString = DataBase.Shops.shopname, targetValueString = shopname)
-        val message = DataBase().dataBaseDelete(name = player.entityName, targetValueString = shopname)
+        val shopInfoList = DataBase().dataBaseInquireByShopname(shopname, player.entityName)
+        val message = DataBase().dataBaseDeleteByShopname(shopname, player.entityName)
         if (message == "commands.deleteshop.ok"){
-            for (i in itemList){
-                val (type,data) = i.split(":", limit = 2)
-                if (type == "items:"){
-                    val itemInfo = DataBase().stringToJson(data)
-                    for (j in itemInfo){
-                        val item = DataBase().stringToItem(j.item)
-                        val stackToAdd = ItemStack(item,j.stock)
-                        inventory.offerOrDrop(stackToAdd)
-                    }
+            for (i in shopInfoList){
+                val itemInfo = DataBase().stringToJson(i.items)
+                for (j in itemInfo){
+                    val item = DataBase().stringToItem(j.item)
+                    val stackToAdd = ItemStack(item,j.stock)
+                    inventory.offerOrDrop(stackToAdd)
                 }
             }
         }
         player.sendMessage(tr(message))
-
     }
 }
 
 fun shopSetAdmin(
     context: CommandContext<ServerCommandSource>,
-    number: Int
-){
-    if (DataBase().dataBaseChange(targetValueInt = number, operation = DataSaveOperation.ADMIN) == 1){
-        context.source.sendFeedback(tr("commands.setadmin.ok"),true)
+    id: Int
+) {
+    if (DataBase().dataBaseChangeAdminById(id) == 1){
+        val textSupplier = Supplier<Text> { tr("commands.setadmin.ok") }
+        context.source.sendFeedback(textSupplier,true)
     } else {
-        context.source.sendFeedback(tr("commands.shops.none"),true)
+        val textSupplier = Supplier<Text> { tr("commands.shops.none") }
+        context.source.sendFeedback(textSupplier,true)
     }
-}
-
-fun shopInfoChange(
-    context: CommandContext<ServerCommandSource>,
-    infoname: String,
-    shopnameNew: String = "",
-    shopname: String = "",
-    blockPos: BlockPos = BlockPos(0,0,0)
-) :Int {
-    val player = context.source.player!!
-    val result = when (infoname){
-        "shopname" -> DataBase().dataBaseChange(targetValue = shopname, shopNameNew = shopnameNew, playerName = player.entityName, operation = DataSaveOperation.SHOPNAME)
-        "pos" -> DataBase().dataBaseChange(targetValue = shopname, blockPos = blockPos, playerName = player.entityName, operation = DataSaveOperation.POS)
-        else -> 114514
-    }
-    if (result == -1){
-        player.sendMessage(tr("commands.shops.none"))
-    } else {
-        player.sendMessage(tr("commands.shopinfo.change.success"))
-    }
-    return Command.SINGLE_SUCCESS
 }

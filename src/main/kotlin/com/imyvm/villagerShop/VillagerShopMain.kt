@@ -1,31 +1,24 @@
 package com.imyvm.villagerShop
 
-import com.imyvm.economy.EconomyMod
 import com.imyvm.villagerShop.apis.DataBase
+import com.imyvm.villagerShop.apis.Items
 import com.imyvm.villagerShop.apis.ModConfig
-import com.imyvm.villagerShop.apis.ModConfig.Companion.ADMIN_NAME
-import com.imyvm.villagerShop.apis.SearchOperation
-import com.imyvm.villagerShop.apis.Translator.tr
-import com.imyvm.villagerShop.commands.itemPurchaseMain
+import com.imyvm.villagerShop.apis.ModConfig.Companion.TAX_RESTOCK
 import com.imyvm.villagerShop.commands.register
 import com.imyvm.villagerShop.shops.spawnInvulnerableVillager
+import kotlinx.serialization.json.Json
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityType
-import net.minecraft.server.network.ServerPlayerEntity
+import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.BufferedWriter
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-
-import java.io.File
-import java.io.FileWriter
 
 class VillagerShopMain : ModInitializer {
 	override fun onInitialize() {
@@ -33,54 +26,28 @@ class VillagerShopMain : ModInitializer {
 		CommandRegistrationCallback.EVENT.register { dispatcher, commandRegistryAccess, _ ->
 			register(dispatcher, commandRegistryAccess)
 		}
+		itemList.addAll(purchaseItemLoad())
+		TradeType.STOCK.tax = TAX_RESTOCK.value
 		ServerLifecycleEvents.SERVER_STARTED.register { server ->
-			itemPurchaseMain(server)
 			ServerChunkEvents.CHUNK_LOAD.register { serverWorld,chunk ->
 				val scheduledExecutorService = Executors.newScheduledThreadPool(1)
 				scheduledExecutorService.schedule({
 					server.execute {
 						val boundingBox = Box(chunk.pos.startPos, chunk.pos.startPos.add(16, 256, 16))
-						val entitiesInChunk = serverWorld.getEntitiesByType(EntityType.VILLAGER,boundingBox) {entity -> entity.scoreboardTags.contains("VillagerShop")}
+						val entitiesInChunk = serverWorld.getEntitiesByType(EntityType.VILLAGER, boundingBox) {entity -> entity.commandTags.contains("VillagerShop")}
 						entitiesInChunk.forEach { it.remove(Entity.RemovalReason.KILLED) }
 						val worldUUID: String = serverWorld.registryKey.value.toString()
-						val shopInfo = DataBase().dataBaseInquire(
-							targetValueString = chunk.pos.centerX.toString() + ",0," + chunk.pos.centerZ,
-							rangeX = 8, rangeY = 32767, rangeZ = 8, operation = SearchOperation.LOCATION, world = worldUUID
+						val shopInfo = DataBase().dataBaseInquireByLocation(
+							chunk.pos.centerX.toString() + ",0," + chunk.pos.centerZ,
+							8, 32767, 8 , worldUUID
 						)
 						for (i in shopInfo) {
-							val (type,value) = i.split(":")
-							if (type == "pos") {
-								spawnInvulnerableVillager(DataBase().stringToBlockPos(value), serverWorld)
-							}
+							val sellItemList = mutableListOf<Items>(Json.decodeFromString(i.items))
+							val shopName = i.shopname
+							spawnInvulnerableVillager(BlockPos(i.posX, i.posY, i.posZ), serverWorld, sellItemList, shopName)
 						}
 					}
 				}, 500, TimeUnit.MILLISECONDS)
-			}
-			ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
-				if (handler.player.name.toString() == ADMIN_NAME.value) {
-					LOGGER.info(handler.player.entityName)
-					ADMIN = handler.player
-					val file = File("../world/tax.txt")
-					val amount = file.readText().toLong()
-					val scheduledExecutorService = Executors.newScheduledThreadPool(1)
-					scheduledExecutorService.schedule({
-						server.execute {
-							ADMIN?.let { admin ->
-								val fileWriter = FileWriter("../world/tax.txt", false)
-								val bufferedWriter = BufferedWriter(fileWriter)
-								val adminData = EconomyMod.data.getOrCreate(admin)
-								adminData.addMoney(amount)
-								admin.sendMessage(tr("admin.tax.offline",amount))
-								bufferedWriter.write("0")
-							}
-						}
-					},2,TimeUnit.SECONDS)
-				}
-			}
-			ServerPlayConnectionEvents.DISCONNECT.register { handler,_ ->
-				if (handler.player.name.toString() == ADMIN_NAME.value) {
-					ADMIN = null
-				}
 			}
 		}
 		LOGGER.info("Imyvm Villager Shop initialized")
@@ -90,6 +57,13 @@ class VillagerShopMain : ModInitializer {
 		val LOGGER: Logger = LoggerFactory.getLogger("Imyvm-VillagerShop")
 		const val MOD_ID = "imyvm_villagershop"
 		val CONFIG: ModConfig = ModConfig()
-		var ADMIN: ServerPlayerEntity? =null
+		val itemList: MutableList<Items> = mutableListOf()
+	}
+	private fun purchaseItemLoad(): MutableList<Items> {
+		val itemList: MutableList<Items> = mutableListOf()
+		for (i in DataBase().dataBaseInquireByType()) {
+			itemList.addAll(DataBase().stringToJson(i.items))
+		}
+		return itemList
 	}
 }

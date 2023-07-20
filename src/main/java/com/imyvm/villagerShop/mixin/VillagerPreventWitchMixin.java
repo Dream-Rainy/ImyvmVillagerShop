@@ -19,7 +19,7 @@ public abstract class VillagerPreventWitchMixin extends PassiveEntity {
     @Inject(method = "onStruckByLightning", at = @At("HEAD"), cancellable = true)
     private void preventWitchTransformation(CallbackInfo ci) {
         VillagerEntity villager = (VillagerEntity) (Object) this;
-        if (villager.getScoreboardTags().contains("VillagerShop")) {
+        if (villager.getCommandTags().contains("VillagerShop")) {
             ci.cancel();
         }
     }

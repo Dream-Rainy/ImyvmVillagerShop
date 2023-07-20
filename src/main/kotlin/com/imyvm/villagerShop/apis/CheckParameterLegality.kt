@@ -10,19 +10,19 @@ fun checkParameterLegality(args: String): Pair<Int,MutableList<Items>> {
     var compare = -1
     var item = ""
     for (i in argList) {
-        if (itemR.matches(i)){
+        if (itemR.matches(i)) {
             countItem += 1
             item = i
-        }else if (countR.matches(i)){
+        } else if (countR.matches(i)) {
             countPrice += 1
-            val (count,price) = i.split(":").map(String::toInt)
-            itemList.add(Items(item,count,price))
+            val (count, price) = i.split(":").map(String::toInt)
+            itemList.add(Items(item, count, price, -1))
         }
     }
-    if (countItem == 0){
+    if (countItem == 0) {
         compare = 0
-    }else if (countItem != countPrice){
+    }else if (countItem != countPrice) {
         compare = 1
     }
-    return Pair(compare,itemList)
+    return Pair(compare, itemList)
 }
