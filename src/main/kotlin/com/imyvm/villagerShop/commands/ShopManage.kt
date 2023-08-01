@@ -20,6 +20,7 @@ import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.text.Text
 import net.minecraft.util.math.BlockPos
 import java.util.function.Supplier
+import kotlin.math.pow
 
 fun adminShopCreate(
     context: CommandContext<ServerCommandSource>,
@@ -59,17 +60,17 @@ fun playerShopCreate(
     }
 
     for (i in itemList) {
-        if ((DataBase().stringToItem(i.item) == item.item) && i.price.toLong() <= price/count*0.8) {
+        if ((DataBase().stringToItem(i.item) == item.item) && i.price.toLong() <= price / count * 0.8) {
             player.sendMessage(tr("commands.shop.create.item.price.toolow",item.item.name))
             return
         }
     }
 
     val shopCount = DataBase().dataBaseInquireByOwner(player.entityName)
-    val amount = if (shopCount.size <3 ){
+    val amount = if (shopCount.size < 3 ){
         40L
     } else {
-        Math.pow(2.0, shopCount.size.toDouble()-1).toLong()
+        2.0.pow(shopCount.size.toDouble() - 1).toLong()
     }
     if (amount > sourceData.money) {
         player.sendMessage(tr("commands.shop.create.failed.lack"))
@@ -114,7 +115,7 @@ fun rangeSearch(
                             "${player.pos.x},${player.pos.y},${player.pos.z}",
                             rangeX, rangeY, rangeZ ,player.world.asString())
                     }
-                    else -> mutableListOf<ShopInfo>()
+                    else -> mutableListOf()
                 }
             if (!results.containsAll(temp)) results.addAll(temp)
         } else {

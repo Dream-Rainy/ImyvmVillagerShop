@@ -365,12 +365,3 @@ private fun addPendingOperation(context: CommandContext<ServerCommandSource>, op
         coroutineScope(context)
     }
 }
-
-private fun cancelOperation(playerUUID: UUID): Boolean {
-    return if (pendingOperations.containsKey(playerUUID)) {
-        pendingOperations.remove(playerUUID)
-        true
-    } else {
-        false
-    }
-}
