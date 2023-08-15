@@ -38,6 +38,8 @@ jobs:
         with:
           gradle-version: 8.1
           arguments: build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: capture build artifacts
         if: ${{ runner.os == 'Linux' && matrix.java == '20' }} # Only upload artifacts built from latest java on one OS
         uses: actions/upload-artifact@v3.1.2
