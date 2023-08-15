@@ -29,10 +29,10 @@ enum class ItemOperation {
 }
 @Serializable
 data class Items(
-    val item: String,
-    val count: Int,
-    val price: Int,
-    val stock: Int
+    var item: String,
+    var count: Int,
+    var price: Int,
+    var stock: Int
 )
 
 data class ShopInfo(
@@ -55,7 +55,7 @@ class DataBase {
             var database: Database
             when (DATABASE_TYPE.value) {
                 "POSTGRESQL" -> {
-                    database = configInitialization("com.impossibl.postgres.jdbc.PGDriver")
+                    database = configInitialization("org.postgresql.Driver")
                 }
                 "ORACLE" -> {
                     database = configInitialization("oracle.jdbc.OracleDriver")
@@ -142,71 +142,53 @@ class DataBase {
 
     fun modifyItems(
         shopname: String,
-        item: ItemStackArgument? = null,
+        item: ItemStackArgument,
         count: Int = 0,
         price: Int = 0,
         stock: Int = 0,
         playerName: String,
-        operation: ItemOperation,
+        operation: ItemOperation
     ): String {
-        val sellItemList = dataBaseInquireByShopname(shopname,playerName)
-        val sellItemListNew = mutableListOf<Items>()
-        var itemCount = 0
-
-        for (i in sellItemList) {
-            val currentItem = stringToJson(i.items)
-            when (operation) {
-                ItemOperation.ADD -> {
-                    itemCount = currentItem.size
-                    sellItemListNew.addAll(currentItem)
-                }
-                ItemOperation.DELETE -> {
-                    for (j in currentItem) {
-                        if (j.item != item?.asString()) {
-                            sellItemListNew.add(j)
-                        } else {
-                            itemCount = j.stock
-                        }
-                    }
-                }
-                ItemOperation.CHANGE -> {
-                    for (j in currentItem){
-                        if (j.item == item?.asString()) {
-                            sellItemListNew.add(Items(item.asString(), count, price, stock))
-                        } else {
-                            sellItemListNew.add(j)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (operation == ItemOperation.ADD) {
-            for (i in itemList) {
-                if ((DataBase().stringToItem(i.item) == item?.item) && i.price.toLong() <= price/count*0.8) {
+        val shop = dataBaseInquireByShopname(shopname, playerName).firstOrNull() ?: return "commands.shops.none"
+        val currentItem = stringToJson(shop.items)
+        when (operation) {
+            ItemOperation.ADD -> {
+                if (itemList.firstOrNull {
+                        stringToItem(it.item) == item.item && it.price.toLong() <= price / count * 0.8
+                    } != null)
+                {
                     return "commands.shop.create.item.price.toolow"
                 }
+                if (currentItem.size >= 7) {
+                    return "commands.playershop.item.limit"
+                } else if (currentItem.firstOrNull { stringToItem(it.item) == item.item } != null) {
+                    return "commands.playershop.add.repeat"
+                } else {
+                    currentItem.add(Items(item.asString(), count, price, 0))
+                }
+                dataBaseChangeItemByShopname(shopname,currentItem,playerName)
+                return "commands.shop.item.add.success"
             }
-            if (itemCount >= 7) {
-                return "commands.playershop.create.limit"
-            } else if (sellItemListNew.firstOrNull { it.item == item?.asString() } != null) {
-                return "commands.playershop.add.repeat"
-            } else {
-                sellItemListNew.add(Items(item!!.asString(), count, price, 0))
+            ItemOperation.DELETE -> {
+                if (!currentItem.removeIf {
+                        stringToItem(it.item) == item.item
+                }) {
+                    return "commands.shop.item.none"
+                }
+                dataBaseChangeItemByShopname(shopname,currentItem,playerName)
+                return "commands.shop.item.delete.success,${currentItem.size}"
             }
-        }
-        if (operation == ItemOperation.DELETE && itemCount == 0) {
-            return "commands.shop.item.none"
-        }
-
-        if (dataBaseChangeItemByShopname(shopname, sellItemListNew, playerName) == -1) {
-            return "commands.shops.none"
-        }
-
-        return when (operation) {
-            ItemOperation.ADD -> "commands.shop.item.add.success"
-            ItemOperation.DELETE -> "commands.shop.item.delete.success,${itemCount}"
-            ItemOperation.CHANGE -> "commands.shop.item.change.success"
+            ItemOperation.CHANGE -> {
+                val itemToChange = currentItem.find {
+                    stringToItem(it.item) == item.item
+                }
+                return if (itemToChange != null) {
+                    itemToChange.item = Items(item.asString(), count, price, stock).toString()
+                    "commands.shop.item.change.success"
+                } else {
+                    "commands.shop.item.none"
+                }
+            }
         }
     }
 
@@ -397,7 +379,7 @@ class DataBase {
         }
     }
 
-    fun stringToJson(data: String): List<Items> {
+    fun stringToJson(data: String): MutableList<Items> {
         return Json.decodeFromString(data)
     }
     fun stringToItem(itemString: String): Item {

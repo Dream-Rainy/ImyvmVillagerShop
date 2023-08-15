@@ -1,7 +1,7 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.economy.EconomyMod
-import com.imyvm.villagerShop.TradeType
+import com.imyvm.villagerShop.apis.ModConfig.Companion.TAX_RESTOCK
 import com.imyvm.villagerShop.apis.DataBase
 import com.imyvm.villagerShop.apis.ItemOperation
 import com.imyvm.villagerShop.apis.Translator.tr
@@ -17,7 +17,7 @@ import kotlin.math.min
 fun handleItemOperation(
     context: CommandContext<ServerCommandSource>,
     shopname: String,
-    item: ItemStackArgument? = null,
+    item: ItemStackArgument,
     count: Int = 0,
     price: Int = 0,
     operation: ItemOperation
@@ -28,17 +28,17 @@ fun handleItemOperation(
         val(temp,itemCount) = message.split(",", limit = 2)
         player.sendMessage(tr(temp))
         val inventory = player.inventory
-        val stackToAdd = ItemStack(item!!.item,itemCount.toInt())
+        val stackToAdd = ItemStack(item.item,itemCount.toInt())
         inventory.offerOrDrop(stackToAdd)
         return Command.SINGLE_SUCCESS
     }
     if (operation == ItemOperation.ADD && message == "commands.shop.create.item.price.toolow"){
-        player.sendMessage(tr(message,item?.item?.name))
+        player.sendMessage(tr(message,item.item?.name))
     }
     player.sendMessage(tr(message))
     if (operation == ItemOperation.ADD){
         val inventory = player.inventory
-        removeItemFromInventory(player,item!!.item,inventory.count(item.item))
+        removeItemFromInventory(player,item.item,inventory.count(item.item))
         player.sendMessage(tr("commands.stock.add.ok",inventory.count(item.item)))
     }
 
@@ -101,7 +101,7 @@ fun itemQuantityAdd(
         player.sendMessage(tr("commands.shop.item.none"))
         return -1
     }
-    val amount = (itemPrice * amountToConsume + itemPrice * amountToConsume * TradeType.STOCK.tax).toLong()
+    val amount = (itemPrice * amountToConsume + itemPrice * amountToConsume * TAX_RESTOCK.value).toLong()
     if (amount > sourceData.money){
         player.sendMessage(tr("commands.shop.stock.failed.lack"))
         return -1
@@ -117,7 +117,7 @@ fun itemQuantityAdd(
             count =itemCount
         )
         player.sendMessage(tr("commands.stock.add.ok",amountToConsume))
-        sourceData.addMoney(-amount, TradeType.STOCK)
+        sourceData.addMoney(-amount)
         player.sendMessage(tr("commands.balance.consume",amount))
     } else {
         player.sendMessage(tr("commands.item.lack"))

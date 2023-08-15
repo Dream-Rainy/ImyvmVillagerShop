@@ -3,7 +3,6 @@ package com.imyvm.villagerShop
 import com.imyvm.villagerShop.apis.DataBase
 import com.imyvm.villagerShop.apis.Items
 import com.imyvm.villagerShop.apis.ModConfig
-import com.imyvm.villagerShop.apis.ModConfig.Companion.TAX_RESTOCK
 import com.imyvm.villagerShop.commands.register
 import com.imyvm.villagerShop.shops.spawnInvulnerableVillager
 import kotlinx.serialization.json.Json
@@ -27,7 +26,6 @@ class VillagerShopMain : ModInitializer {
 			register(dispatcher, commandRegistryAccess)
 		}
 		itemList.addAll(purchaseItemLoad())
-		TradeType.STOCK.tax = TAX_RESTOCK.value
 		ServerLifecycleEvents.SERVER_STARTED.register { server ->
 			ServerChunkEvents.CHUNK_LOAD.register { serverWorld,chunk ->
 				val scheduledExecutorService = Executors.newScheduledThreadPool(1)
@@ -41,10 +39,8 @@ class VillagerShopMain : ModInitializer {
 							chunk.pos.centerX.toString() + ",0," + chunk.pos.centerZ,
 							8, 32767, 8 , worldUUID
 						)
-						for (i in shopInfo) {
-							val sellItemList = mutableListOf<Items>(Json.decodeFromString(i.items))
-							val shopName = i.shopname
-							spawnInvulnerableVillager(BlockPos(i.posX, i.posY, i.posZ), serverWorld, sellItemList, shopName)
+						shopInfo.forEach {
+							spawnInvulnerableVillager(BlockPos(it.posX, it.posY, it.posZ), serverWorld, Json.decodeFromString(it.items), it.shopname)
 						}
 					}
 				}, 500, TimeUnit.MILLISECONDS)
