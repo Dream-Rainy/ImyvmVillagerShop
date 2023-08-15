@@ -17,9 +17,15 @@ jobs:
         # and run on both Linux and Windows
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
+      - name: Set environmental variables
+        run: |
+          echo "GITHUB_USERNAME=$GITHUB_ACTOR" >> $GITHUB_ENV
       - name: validate gradle wrapper
         uses: gradle/wrapper-validation-action@v1.0.6
       - name: setup jdk ${{ matrix.java }}
