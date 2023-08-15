@@ -8,7 +8,7 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 
 fun spawnInvulnerableVillager(
-    pos: BlockPos,world: World,
+    pos: BlockPos, world: World,
     sellItemList: MutableList<Items>,
     shopname: String,
     type: Int = 0

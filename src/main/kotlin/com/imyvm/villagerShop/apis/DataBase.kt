@@ -43,6 +43,7 @@ data class ShopInfo(
     val posZ: Int,
     val world: String,
     val admin: Int,
+    val type: Int,
     val owner: String,
     val items: String
 )
@@ -102,13 +103,13 @@ class DataBase {
 
     object Shops : IntIdTable() {
         val shopname = varchar("shopname", 20)
-        val owner = varchar("owner", 40)
-        val admin = integer("admin")
-        val type = integer("type")
         val posX = integer("posX")
         val posY = integer("posY")
         val posZ = integer("posZ")
         val world = varchar("world", 100)
+        val owner = varchar("owner", 40)
+        val admin = integer("admin")
+        val type = integer("type")
         val items = text("items")
     }
 
@@ -282,6 +283,7 @@ class DataBase {
             posZ = row[Shops.posZ],
             world = row[Shops.world],
             admin = row[Shops.admin],
+            type = row[Shops.type],
             owner = row[Shops.owner],
             items = row[Shops.items]
         )
