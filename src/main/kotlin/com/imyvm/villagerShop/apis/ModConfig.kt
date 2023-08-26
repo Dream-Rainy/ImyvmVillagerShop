@@ -49,7 +49,7 @@ class ModConfig : HokiConfig("Imyvm_VillagerShop.conf") {
         @ConfigOption
         val DATABASE_URL = Option(
             "core.database.url",
-            "jdbc:pgsql://localhost:5432/imyvmvillagershop",
+            "jdbc:postgresql://localhost:5432/imyvmvillagershop",
             "Database connection URL. \n" +
                     "If you want to use Mysql, please use \"jdbc:mysql://localhost:3306/imyvmvillagershop\"\n" +
                     "or Oracle : jdbc:oracle:thin:@//localhost:1521/imyvmvillagershop\n" +

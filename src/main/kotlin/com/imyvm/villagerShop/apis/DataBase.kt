@@ -1,7 +1,7 @@
 package com.imyvm.villagerShop.apis
 
-import com.imyvm.villagerShop.VillagerShopMain
 import com.imyvm.villagerShop.VillagerShopMain.Companion.LOGGER
+import com.imyvm.villagerShop.VillagerShopMain.Companion.itemList
 import com.imyvm.villagerShop.apis.ModConfig.Companion.DATABASE_MAXPOOLSIZE
 import com.imyvm.villagerShop.apis.ModConfig.Companion.DATABASE_PASSWORD
 import com.imyvm.villagerShop.apis.ModConfig.Companion.DATABASE_TYPE
@@ -29,10 +29,10 @@ enum class ItemOperation {
 }
 @Serializable
 data class Items(
-    val item: String,
-    val count: Int,
-    val price: Int,
-    val stock: Int
+    var item: String,
+    var count: Int,
+    var price: Int,
+    var stock: Int
 )
 
 data class ShopInfo(
@@ -55,7 +55,7 @@ class DataBase {
             var database: Database
             when (DATABASE_TYPE.value) {
                 "POSTGRESQL" -> {
-                    database = configInitialization("com.impossibl.postgres.jdbc.PGDriver")
+                    database = configInitialization("org.postgresql.Driver")
                 }
                 "ORACLE" -> {
                     database = configInitialization("oracle.jdbc.OracleDriver")
@@ -140,116 +140,56 @@ class DataBase {
         return "commands.shop.create.success"
     }
 
-    sealed class OperationResult {
-        data class Success(val itemListUpdated: MutableList<Items>, val itemCount: Int = 0) : OperationResult()
-        object PriceTooLow : OperationResult()
-        object LimitReached : OperationResult()
-        object RepeatItem : OperationResult()
-        object ItemNotFound : OperationResult()
-    }
-
     fun modifyItems(
         shopname: String,
-        item: ItemStackArgument? = null,
+        item: ItemStackArgument,
         count: Int = 0,
         price: Int = 0,
         stock: Int = 0,
         playerName: String,
         operation: ItemOperation
     ): String {
-        val shop = dataBaseInquireByShopname(shopname, playerName)
-        val itemListAux = shop.first()
-        val itemListCurrent = stringToJson(itemListAux.items)
-
-        val (itemListUpdated, result) = when (operation) {
-            ItemOperation.ADD -> addItem(itemListCurrent, item, count, price)
-            ItemOperation.DELETE -> deleteItem(itemListCurrent, item)
-            ItemOperation.CHANGE -> changeItem(itemListCurrent, item, count, price, stock)
-        }
-
-        return when (result) {
-            is OperationResult.PriceTooLow -> "commands.shop.create.item.price.toolow"
-            is OperationResult.LimitReached -> "commands.playershop.create.limit"
-            is OperationResult.RepeatItem -> "commands.playershop.add.repeat"
-            is OperationResult.ItemNotFound -> "commands.shop.item.none"
-            is OperationResult.Success -> {
-                if (dataBaseChangeItemByShopname(shopname, itemListUpdated, playerName) == -1) {
-                    "commands.shops.none"
+        val shop = dataBaseInquireByShopname(shopname, playerName).firstOrNull() ?: return "commands.shops.none"
+        val currentItem = stringToJson(shop.items)
+        when (operation) {
+            ItemOperation.ADD -> {
+                if (itemList.firstOrNull {
+                        stringToItem(it.item) == item.item && it.price.toLong() <= price / count * 0.8
+                    } != null)
+                {
+                    return "commands.shop.create.item.price.toolow"
+                }
+                if (currentItem.size >= 7) {
+                    return "commands.playershop.item.limit"
+                } else if (currentItem.firstOrNull { stringToItem(it.item) == item.item } != null) {
+                    return "commands.playershop.add.repeat"
                 } else {
-                    when (operation) {
-                        ItemOperation.ADD -> "commands.shop.item.add.success"
-                        ItemOperation.DELETE -> "commands.shop.item.delete.success,${result.itemCount}"
-                        ItemOperation.CHANGE -> "commands.shop.item.change.success"
-                    }
+                    currentItem.add(Items(item.asString(), count, price, 0))
+                }
+                dataBaseChangeItemByShopname(shopname,currentItem,playerName)
+                return "commands.shop.item.add.success"
+            }
+            ItemOperation.DELETE -> {
+                if (!currentItem.removeIf {
+                        stringToItem(it.item) == item.item
+                }) {
+                    return "commands.shop.item.none"
+                }
+                dataBaseChangeItemByShopname(shopname,currentItem,playerName)
+                return "commands.shop.item.delete.success,${currentItem.size}"
+            }
+            ItemOperation.CHANGE -> {
+                val itemToChange = currentItem.find {
+                    stringToItem(it.item) == item.item
+                }
+                return if (itemToChange != null) {
+                    itemToChange.item = Items(item.asString(), count, price, stock).toString()
+                    "commands.shop.item.change.success"
+                } else {
+                    "commands.shop.item.none"
                 }
             }
         }
-    }
-
-    private fun addItem(
-        itemListCurrent: List<Items>,
-        item: ItemStackArgument?,
-        count: Int,
-        price: Int
-    ): Pair<MutableList<Items>, OperationResult> {
-        val itemListUpdated = itemListCurrent.toMutableList()
-        var itemCount = itemListCurrent.size
-
-        for (i in VillagerShopMain.itemList) {
-            if ((DataBase().stringToItem(i.item) == item?.item) && i.price.toLong() <= price / count * 0.8) {
-                return Pair(itemListUpdated, OperationResult.PriceTooLow)
-            }
-        }
-        if (itemCount >= 7) {
-            return Pair(itemListUpdated, OperationResult.LimitReached)
-        } else if (itemListUpdated.firstOrNull { it.item == item?.asString() } != null) {
-            return Pair(itemListUpdated, OperationResult.RepeatItem)
-        }
-
-        itemListUpdated.add(Items(item!!.asString(), count, price, 0))
-        return Pair(itemListUpdated, OperationResult.Success(itemListUpdated, itemCount))
-    }
-
-    private fun deleteItem(
-        itemListCurrent: List<Items>,
-        item: ItemStackArgument?
-    ): Pair<MutableList<Items>, OperationResult> {
-        val itemListUpdated = mutableListOf<Items>()
-        var itemCount = 0
-
-        for (j in itemListCurrent) {
-            if (j.item != item?.asString()) {
-                itemListUpdated.add(j)
-            } else {
-                itemCount = j.stock
-            }
-        }
-
-        return if (itemCount == 0) {
-            Pair(itemListUpdated, OperationResult.ItemNotFound)
-        } else {
-            Pair(itemListUpdated, OperationResult.Success(itemListUpdated, itemCount))
-        }
-    }
-
-    private fun changeItem(
-        itemListCurrent: List<Items>,
-        item: ItemStackArgument?,
-        count: Int,
-        price: Int,
-        stock: Int
-    ): Pair<MutableList<Items>, OperationResult> {
-        val itemListUpdated = mutableListOf<Items>()
-
-        for (j in itemListCurrent) {
-            if (j.item == item?.asString()) {
-                itemListUpdated.add(Items(item.asString(), count, price, stock))
-            } else {
-                itemListUpdated.add(j)
-            }
-        }
-
-        return Pair(itemListUpdated, OperationResult.Success(itemListUpdated))
     }
 
     private fun dataBaseSave(shopname: String, pos: BlockPos, worldUUID:String, items: String, owner: String, admin: Int = 0, type: Int = 0) {
@@ -439,7 +379,7 @@ class DataBase {
         }
     }
 
-    fun stringToJson(data: String): List<Items> {
+    fun stringToJson(data: String): MutableList<Items> {
         return Json.decodeFromString(data)
     }
     fun stringToItem(itemString: String): Item {

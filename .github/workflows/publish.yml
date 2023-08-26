@@ -1,0 +1,43 @@
+name: publish release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set environmental variables
+        run: |
+          echo "GITHUB_USERNAME=$GITHUB_ACTOR" >> $GITHUB_ENV
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: 17
+
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Build package
+        run: ./gradlew build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "Release ${{ github.ref_name }}"
+          prerelease: ${{ contains(github.event.head_commit.message, '[pre-release]') }}
+          files: build/libs/*.jar
+          generate_release_notes: true

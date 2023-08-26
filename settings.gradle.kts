@@ -4,8 +4,6 @@ pluginManagement {
     }
 
     repositories {
-        gradlePluginPortal()
-        mavenCentral()
         maven {
             name = "Fabric"
             url = uri("https://maven.fabricmc.net/")
@@ -13,7 +11,8 @@ pluginManagement {
         maven {
             url = uri("https://libraries.minecraft.net")
         }
-
+        mavenCentral()
+        gradlePluginPortal()
     }
 
     plugins {

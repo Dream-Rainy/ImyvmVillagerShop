@@ -25,23 +25,33 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
-	maven {
-		name = "Fabric"
-		url = uri("https://maven.fabricmc.net/")
-	}
 
+	mavenCentral()
 	// Imyvm Hoki
 	maven {
 		url = uri("https://maven.victorica.dev")
 	}
+
 	maven {
-		url = uri("https://share.dreamrain.top")
+		url = uri("https://maven.pkg.github.com/ImyvmCircle/ImyvmEconomy")
+		credentials {
+			username = System.getenv("GITHUB_USERNAME")
+			password = System.getenv("GITHUB_TOKEN")
+		}
 	}
 
-	// maven {
-	//	 name = "JP Mods"
-	//	 url = uri("https://maven.jpcode.dev")
-	// }
+	maven {
+		url = uri("https://maven.pkg.github.com/ImyvmCircle/HoKi")
+		credentials {
+			username = System.getenv("GITHUB_USERNAME")
+			password = System.getenv("GITHUB_TOKEN")
+		}
+	}
+
+	maven {
+		name = "JP Mods"
+		url = uri("https://maven.jpcode.dev")
+	}
 
 	// Fabric Permissions Api
 	maven {
@@ -57,6 +67,7 @@ dependencies {
 	mappings("net.fabricmc:yarn:${project["yarn_mappings"]}:v2")
 	modImplementation("net.fabricmc:fabric-loader:${project["loader_version"]}")
 
+
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation("net.fabricmc.fabric-api:fabric-api:${project["fabric_version"]}")
 	modImplementation("com.mojang:brigadier:${project["brigadier_version"]}")
@@ -65,13 +76,14 @@ dependencies {
 	modImplementation("com.imyvm:imyvm-economy:${project["imyvm_economy_version"]}")
 
 	modImplementation("net.fabricmc:fabric-language-kotlin:${project["fabric_kotlin_version"]}")
-	modImplementation("me.lucko:fabric-permissions-api:0.2-SNAPSHOT")
+	modImplementation("me.lucko:fabric-permissions-api:${project["fabric_permissions_api_version"]}")
 	implementation("org.jetbrains.exposed:exposed-core:${project["exposed_version"]}")
 	implementation("org.jetbrains.exposed:exposed-dao:${project["exposed_version"]}")
 	implementation("org.jetbrains.exposed:exposed-jdbc:${project["exposed_version"]}")
 	implementation("com.mysql:mysql-connector-j:${project["mysql-connector_version"]}")
 	implementation("com.zaxxer:HikariCP:${project["HikariCP_version"]}")
-	implementation("com.impossibl.pgjdbc-ng", "pgjdbc-ng", project["postgresql_version"])
+//	implementation("com.impossibl.pgjdbc-ng", "pgjdbc-ng", "0.8.9")
+	implementation("org.postgresql:postgresql:${project["postgresql_version"]}")
 	implementation("org.xerial:sqlite-jdbc:${project["sqlite-jdbc_version"]}")
 	implementation("com.microsoft.sqlserver:mssql-jdbc:${project["mssql-jdbc_version"]}")
 	implementation("com.oracle.database.jdbc:ojdbc11:${project["ojdbc11_version"]}")

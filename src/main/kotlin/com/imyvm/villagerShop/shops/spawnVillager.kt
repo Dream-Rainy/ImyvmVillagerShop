@@ -10,7 +10,7 @@ import net.minecraft.world.World
 fun spawnInvulnerableVillager(
     pos: BlockPos, world: World,
     sellItemList: MutableList<Items>,
-    shopname: String,
+    shopName: String,
     type: Int = 0
 ) {
     val villager = VillagerEntity(EntityType.VILLAGER, world)
@@ -20,6 +20,6 @@ fun spawnInvulnerableVillager(
     villager.isBaby = false
     villager.horizontalCollision = false
     villager.addCommandTag("VillagerShop")
-    villager.customName = Text.of(shopname)
+    villager.customName = Text.of(shopName)
     world.spawnEntity(villager)
 }

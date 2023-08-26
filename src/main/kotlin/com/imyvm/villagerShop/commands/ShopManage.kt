@@ -1,7 +1,6 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.economy.EconomyMod
-import com.imyvm.economy.api.TradeTypeEnum.TradeType
 import com.imyvm.villagerShop.VillagerShopMain
 import com.imyvm.villagerShop.VillagerShopMain.Companion.itemList
 import com.imyvm.villagerShop.apis.DataBase
@@ -79,7 +78,7 @@ fun playerShopCreate(
 
     val worldUUID = player.world.registryKey.value.toString()
     player.sendMessage(tr(DataBase().playerShopCreateSave(item,count,price,inventory.count(item.item),shopname,pos,player.entityName,worldUUID)))
-    sourceData.addMoney(-amount, TradeType.DUTY_FREE)
+    sourceData.addMoney(-amount)
     player.sendMessage(tr("commands.balance.consume", amount))
     removeItemFromInventory(player, item.item, inventory.count(item.item))
     player.sendMessage(tr("commands.stock.add.ok", inventory.count(item.item)))
