@@ -13,7 +13,7 @@
   "commands.shop.item.change.success": "Item modified successfully",
   "commands.shop.item.delete.success": "Item delete successfully",
   "commands.item.lack": "You don't have enough items",
-  "commands.shop.stock.failed.lack": "You don't have enough banlance to restock",
+  "commands.shop.stock.failed.lack": "You don't have enough balance to restock",
   "commands.shop.item.none": "The item does not exist",
   "commands.balance.consume": "This operation cost $ {0}",
   "commands.imyvm_villager_shop.reload.success": "Configuration reloaded",
