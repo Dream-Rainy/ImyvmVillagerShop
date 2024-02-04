@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(LivingEntity.class)
-public abstract class VillagerMovementMixin {
+public class VillagerMovementMixin {
 
         @Redirect(method = "tickMovement", at = @At(value = "INVOKE",target = "Lnet/minecraft/entity/LivingEntity;setVelocity(DDD)V"))
         private void modifySetVelocity(LivingEntity entity, double x, double y, double z) {

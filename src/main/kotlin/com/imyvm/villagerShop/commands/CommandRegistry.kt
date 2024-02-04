@@ -1,10 +1,8 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.villagerShop.VillagerShopMain
-import com.imyvm.villagerShop.apis.DataBase
+import com.imyvm.villagerShop.apis.*
 import com.imyvm.villagerShop.apis.Translator.tr
-import com.imyvm.villagerShop.apis.coroutineScope
-import com.imyvm.villagerShop.apis.customScope
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg
 import com.mojang.brigadier.arguments.DoubleArgumentType.getDouble
@@ -38,8 +36,8 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                     .requires(Permissions.require(VillagerShopMain.MOD_ID + ".admin", 3))
                     .then(argument("shopname", string())
                         .then(argument("pos", blockPos())
-                            .then(argument("items", greedyString())
-                                .then(argument("type", integer())
+                            .then(argument("type", integer())
+                                .then(argument("items", greedyString())
                                 .executes { context ->
                                     adminShopCreate(
                                         context,
@@ -109,7 +107,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                         .then(argument("shopnameold", string())
                             .then(argument("shopnamenew", string())
                                 .executes { context ->
-                                    if (DataBase().dataBaseChangeShopnameByShopname(
+                                    if (dataBaseChangeShopnameByShopname(
                                             getString(context, "shopnameold"),
                                             getString(context, "shopnamenew"),
                                             context.source.player!!.entityName
@@ -125,7 +123,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                         .then(argument("id", integer())
                             .then(argument("shopnamenew", string())
                                 .executes { context ->
-                                    if (DataBase().dataBaseChangeShopnameById(
+                                    if (dataBaseChangeShopnameById(
                                             getInteger(context, "id"),
                                             getString(context, "shopnamenew")
                                         ) !=0 ) {
@@ -143,7 +141,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             .then(argument("id", integer())
                                 .then(argument("newshoppos", blockPos())
                                     .executes { context ->
-                                        if (DataBase().dataBaseChangePosById(
+                                        if (dataBaseChangePosById(
                                                 getInteger(context, "id"),
                                                 getBlockPos(context, "newshoppos")) !=0 ) {
                                             context.source.player?.sendMessage(tr("commands.execute.success"))
@@ -159,7 +157,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             .then(argument("shopanme", string())
                                 .then(argument("newshoppos", blockPos())
                                     .executes { context ->
-                                        if (DataBase().dataBaseChangePosByShopname(
+                                        if (dataBaseChangePosByShopname(
                                                 getString(context, "shopanme"),
                                                 getBlockPos(context, "newshoppos"),
                                                 context.source.player!!.entityName) !=0 ) {
@@ -239,12 +237,23 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                     )
                 )
             )
+            .then(literal("respawn")
+                .requires(Permissions.require(VillagerShopMain.MOD_ID + ".admin",3))
+                .then(argument("id", integer(1))
+                    .executes{ context ->
+                        respawnShop(
+                            context,
+                            getInteger(context, "id")
+                        )
+                    }
+                )
+            )
             .then(literal("item")
                 .then(literal("addstock")
                     .then(argument("shopname", string())
                         .then(argument("item", itemStack(registryAccess))
                             .executes { context ->
-                                itemQuantityAdd(
+                                itemStockAdd(
                                     context,
                                     getString(context,"shopname"),
                                     getItemStackArgument(context, "item"),
@@ -253,7 +262,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             }
                             .then(argument("count", integer(1))
                                 .executes { context ->
-                                    itemQuantityAdd(
+                                    itemStockAdd(
                                         context,
                                         getString(context,"shopname"),
                                         getItemStackArgument(context,"item"),
@@ -350,8 +359,8 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                     1
                 }
             )
-    val VillagerShopCommandNode = dispatcher.register(builder)
-    dispatcher.register(literal("vlsp").redirect(VillagerShopCommandNode))
+    val villagerShopCommandNode = dispatcher.register(builder)
+    dispatcher.register(literal("vlsp").redirect(villagerShopCommandNode))
 }
 
 private fun addPendingOperation(context: CommandContext<ServerCommandSource>, operation: () -> Unit) {

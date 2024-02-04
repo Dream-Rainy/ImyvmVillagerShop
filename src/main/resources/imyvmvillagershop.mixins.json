@@ -4,9 +4,13 @@
   "package": "com.imyvm.villagerShop.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "PlayerManagerMixin",
+    "VehicleAddMixin",
+    "VillagerKeepJobMixin",
     "VillagerMovementMixin",
     "VillagerPreventWitchMixin",
-    "VillagerTradeItemsMatchMixin"
+    "VillagerSleepMixin",
+    "VirtualMerchantScreenHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

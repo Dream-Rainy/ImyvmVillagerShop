@@ -1,6 +1,5 @@
 package com.imyvm.villagerShop.shops
 
-import com.imyvm.villagerShop.apis.Items
 import net.minecraft.entity.EntityType
 import net.minecraft.entity.passive.VillagerEntity
 import net.minecraft.text.Text
@@ -9,9 +8,9 @@ import net.minecraft.world.World
 
 fun spawnInvulnerableVillager(
     pos: BlockPos, world: World,
-    sellItemList: MutableList<Items>,
     shopName: String,
-    type: Int = 0
+    type: Int = 0,
+    id: Int
 ) {
     val villager = VillagerEntity(EntityType.VILLAGER, world)
     villager.setPos(pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble())
@@ -20,6 +19,8 @@ fun spawnInvulnerableVillager(
     villager.isBaby = false
     villager.horizontalCollision = false
     villager.addCommandTag("VillagerShop")
+    villager.addCommandTag("id:${id}")
+    villager.addCommandTag("type:${type}")
     villager.customName = Text.of(shopName)
     world.spawnEntity(villager)
 }

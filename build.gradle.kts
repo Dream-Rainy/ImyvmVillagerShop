@@ -57,6 +57,10 @@ repositories {
 	maven {
 		url = uri("https://oss.sonatype.org/content/repositories/snapshots")
 	}
+
+	maven {
+		url = uri("https://maven.nucleoid.xyz")
+	}
 	mavenLocal()
 
 }
@@ -77,16 +81,21 @@ dependencies {
 
 	modImplementation("net.fabricmc:fabric-language-kotlin:${project["fabric_kotlin_version"]}")
 	modImplementation("me.lucko:fabric-permissions-api:${project["fabric_permissions_api_version"]}")
+	modImplementation("eu.pb4:sgui:${project["sgui_version"]}")
 	implementation("org.jetbrains.exposed:exposed-core:${project["exposed_version"]}")
 	implementation("org.jetbrains.exposed:exposed-dao:${project["exposed_version"]}")
 	implementation("org.jetbrains.exposed:exposed-jdbc:${project["exposed_version"]}")
-	implementation("com.mysql:mysql-connector-j:${project["mysql-connector_version"]}")
+	include("org.jetbrains.exposed:exposed-core:${project["exposed_version"]}")
+	include("org.jetbrains.exposed:exposed-dao:${project["exposed_version"]}")
+	include("org.jetbrains.exposed:exposed-jdbc:${project["exposed_version"]}")
+	include("com.mysql:mysql-connector-j:${project["mysql-connector_version"]}")
 	implementation("com.zaxxer:HikariCP:${project["HikariCP_version"]}")
+	include("com.zaxxer:HikariCP:${project["HikariCP_version"]}")
 //	implementation("com.impossibl.pgjdbc-ng", "pgjdbc-ng", "0.8.9")
-	implementation("org.postgresql:postgresql:${project["postgresql_version"]}")
-	implementation("org.xerial:sqlite-jdbc:${project["sqlite-jdbc_version"]}")
-	implementation("com.microsoft.sqlserver:mssql-jdbc:${project["mssql-jdbc_version"]}")
-	implementation("com.oracle.database.jdbc:ojdbc11:${project["ojdbc11_version"]}")
+	include("org.postgresql:postgresql:${project["postgresql_version"]}")
+	include("org.xerial:sqlite-jdbc:${project["sqlite-jdbc_version"]}")
+	include("com.microsoft.sqlserver:mssql-jdbc:${project["mssql-jdbc_version"]}")
+	include("com.oracle.database.jdbc:ojdbc11:${project["ojdbc11_version"]}")
 	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${project["kotlinx-serialization-json_version"]}")
 	implementation("com.typesafe:config:${project["typesafe_version"]}")
 	// Uncomment the following line to enable the deprecated Fabric API modules. 

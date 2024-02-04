@@ -1,9 +1,8 @@
 package com.imyvm.villagerShop.commands
 
 import com.imyvm.economy.EconomyMod
+import com.imyvm.villagerShop.apis.*
 import com.imyvm.villagerShop.apis.ModConfig.Companion.TAX_RESTOCK
-import com.imyvm.villagerShop.apis.DataBase
-import com.imyvm.villagerShop.apis.ItemOperation
 import com.imyvm.villagerShop.apis.Translator.tr
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.context.CommandContext
@@ -23,23 +22,33 @@ fun handleItemOperation(
     operation: ItemOperation
 ): Int {
     val player = context.source.player
-    val message = DataBase().modifyItems(shopname, item, count, price, playerName = player!!.entityName, operation = operation)
-    if (operation == ItemOperation.DELETE && message != "commands.shop.item.none"){
-        val(temp,itemCount) = message.split(",", limit = 2)
+    val message = modifyItems(shopname, item, count, price, playerName = player!!.entityName, operation = operation)
+    if (operation == ItemOperation.DELETE && message != "commands.shop.item.none") {
+        val(temp, itemCount) = message.split(",", limit = 2)
         player.sendMessage(tr(temp))
         val inventory = player.inventory
-        val stackToAdd = ItemStack(item.item,itemCount.toInt())
+        val stackToAdd = ItemStack(item.item, itemCount.toInt())
         inventory.offerOrDrop(stackToAdd)
         return Command.SINGLE_SUCCESS
     }
-    if (operation == ItemOperation.ADD && message == "commands.shop.create.item.price.toolow"){
+    if (operation == ItemOperation.ADD && message == "commands.shop.create.item.price.toolow") {
         player.sendMessage(tr(message,item.item?.name))
     }
     player.sendMessage(tr(message))
-    if (operation == ItemOperation.ADD){
+    if (operation == ItemOperation.ADD) {
         val inventory = player.inventory
-        removeItemFromInventory(player,item.item,inventory.count(item.item))
-        player.sendMessage(tr("commands.stock.add.ok",inventory.count(item.item)))
+        val itemCount = inventory.count(item.item)
+        if (removeItemFromInventory(player, item.item, itemCount) == 1) {
+            modifyItems(
+                shopname,
+                item = item,
+                count = count,
+                price = price,
+                playerName = player.entityName,
+                operation = ItemOperation.CHANGE
+            )
+        }
+        player.sendMessage(tr("commands.stock.add.ok", itemCount))
     }
 
     return if (operation == ItemOperation.DELETE) 0 else if (message == "commands.playershop.item.limit") -1 else Command.SINGLE_SUCCESS
@@ -69,7 +78,7 @@ fun itemChange(
     price: Int
 ) :Int = handleItemOperation(context, shopname, item, count, price, ItemOperation.CHANGE)
 
-fun itemQuantityAdd(
+fun itemStockAdd(
     context: CommandContext<ServerCommandSource>,
     shopname: String,
     item: ItemStackArgument,
@@ -86,8 +95,8 @@ fun itemQuantityAdd(
     } else {
         count
     }
-    for (i in DataBase().dataBaseInquireByShopname(shopname, player.entityName)) {
-        val itemInfo = DataBase().stringToJson(i.items)
+    for (i in dataBaseInquireByShopname(shopname, player.entityName)) {
+        val itemInfo = strungToItemsMutableList(i.items)
         for (j in itemInfo){
             if (j.item == item.asString()){
                 itemCount = j.count
@@ -97,28 +106,28 @@ fun itemQuantityAdd(
             }
         }
     }
-    if (itemCount == 0){
+    if (itemCount == 0) {
         player.sendMessage(tr("commands.shop.item.none"))
         return -1
     }
-    val amount = (itemPrice * amountToConsume + itemPrice * amountToConsume * TAX_RESTOCK.value).toLong()
-    if (amount > sourceData.money){
+    val amount = (itemPrice * amountToConsume * TAX_RESTOCK.value).toLong() * 100
+    if (amount > sourceData.money) {
         player.sendMessage(tr("commands.shop.stock.failed.lack"))
         return -1
     }
-    if (removeItemFromInventory(player,item.item,amountToConsume) == 1){
-        DataBase().modifyItems(
+    if (removeItemFromInventory(player, item.item, amountToConsume) == 1) {
+        modifyItems(
             shopname,
             playerName = player.entityName,
             operation = ItemOperation.CHANGE,
             stock = amountToConsume + itemStock,
             item = item,
-            price = itemPrice,
-            count =itemCount
+            count =itemCount,
+            price = itemPrice
         )
-        player.sendMessage(tr("commands.stock.add.ok",amountToConsume))
+        player.sendMessage(tr("commands.stock.add.ok", amountToConsume))
         sourceData.addMoney(-amount)
-        player.sendMessage(tr("commands.balance.consume",amount))
+        player.sendMessage(tr("commands.balance.consume", amount / 100))
     } else {
         player.sendMessage(tr("commands.item.lack"))
         return -1
@@ -141,7 +150,7 @@ fun removeItemFromInventory(player: PlayerEntity, itemToRemove: Item, quantity: 
             }
         }
     }
-    if ( count !=0 ){
+    if ( count != 0 ){
         val stackToAdd = ItemStack(itemToRemove,quantity-count)
         inventory.offerOrDrop(stackToAdd)
         return -1

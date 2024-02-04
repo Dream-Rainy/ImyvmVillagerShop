@@ -4,14 +4,14 @@
 
 [![Lisense](https://img.shields.io/github/license/Dream-Rainy/ImyvmVillagerShop?style=for-the-badge)](https://github.com/Dream-Rainy/ImyvmVillagerShop/blob/1.19/LICENSE)![Build](https://img.shields.io/github/actions/workflow/status/Dream-Rainy/ImyvmVillagerShop/build.yml?style=for-the-badge)
 
-**注意，该库仍在开发状态中，目前仅完成了部分指令的注册以及数据的存取，如有任何想法欢迎提issue，有能力者可以帮忙完善并提出pr。**
+**Bug提示：注意，请不要在将个人物品放入任意槽位后选择交易。可能会导致个人物品消失。具体原因仍在排查中**
 ## 一、配置文件
 文件位置：`config/imyvm_villagershop.conf`
 
 ```yaml
 core {
   # 指定显示语言
-  language="en_us"
+  language="zh_cn"
   tax {
     # 玩家补货时的税率
     restock=0.01
@@ -56,7 +56,7 @@ f(x)
 
 **注意**
 
-- 商店刚创建或商品刚添加时默认会使用背包内所有已有物品进行免费补货，你也在创建完成后额外使用`/villagershop item addstock <shopname> <item> [count]`来对商店中**存在的商品**进行“补货”，`count`是一个可选参数，若不填则默认消耗背包内所有特定物品。  
+- 商店刚创建或商品刚添加时默认会使用背包内**所有**（无法选择是否添加）已有物品进行免费补货，你也在创建完成后额外使用`/villagershop item addstock <shopname> <item> [count]`来对商店中**存在的商品**进行“补货”，`count`是一个可选参数，若不填则默认消耗背包内所有特定物品。  
 同时，补货需要消耗一定的货币，计算公式如下:
 
 ```math
@@ -71,11 +71,12 @@ f(x) = p \times c \times t
 - 创建商店时的`count`参数代表用`price`的钱可以买到`count`个数的物品  
 举个栗子，比如我使用`/villagershop create shop DreamRain 0 0 0 minecraft:cherry_leaves 2 100`创建了一个名为`DreamRain`并出售`樱花树叶`的商店。那么，我可以使用`100`货币买到`2`个`樱花树叶`。而不是商店中`樱花树叶`的库存为`2`。
 - 所有商店都有一个唯一的`shopnumber`标识符，并且永远不可能重复。
+- 目前商品暂不支持保存NBT（未经测试），可能会导致无法获取到指定的物品，无法保留自定义NBT等问题。
 
 ### 2.系统商店
 
-管理员可以使用指令`/villagershop create adminshop <shopname> <x y z> <item1> <count>:<price> <item2> <count>:<price> ... <item_n> <count>:<price>`来创建系统商店。  
-系统商店库存**无限**，但是可以使用玩家商店中的`stock`参数来限制单个玩家的购买数量。  
+管理员可以使用指令`/villagershop create adminshop <shopname> <x y z> <type> <item1> <count>:<price> <item2> <count>:<price> ... <item_n> <count>:<price>`来创建系统商店。  
+系统商店库存**无限**，但是可以使用玩家商店中的`stock`参数来限制单个玩家的购买数量[^2]。  
 
 ## 三、商店管理
 
@@ -85,14 +86,14 @@ f(x) = p \times c \times t
 
 ### 2.商店设置
 
-玩家可以使用`/villagershop manager info set {shopname,id} {shopnamenew,x y z}`来修改商店的名称或者位置。当你不想要该商店时，可以使用`/villagershop delete {shopname,shopnumber}`[^1]来删除该商店，管理员可以使用`shopnumber`删除任意不符合规定的商店，无需提前通知拥有者。删除商店会返还所有的库存，但是并不会返还创建时消耗的货币。同时，被管理员删除的商店并不会返还库存  
+玩家可以使用`/villagershop manager info set {shopname,id} {shopnamenew,x y z}`来修改商店的名称或者位置。当你不想要该商店时，可以使用`/villagershop delete {shopname,shopnumber}`[^1]来删除该商店，管理员可以使用`shopnumber`删除任意不符合规定的商店，无需提前通知拥有者。删除商店会返还所有的库存，但是并不会返还创建时消耗的货币。同时，被管理员删除的商店并不会返还库存。  
 同时，管理员可以使用`/villagershop manager search {shopname:shopname, location:location, owner:owner, range:range}`，owner参数可以使用玩家**创建商店时**的ID。可以使用`/villagershop manager inquire <shopnumber>`获取特定商店的详细信息。    
 管理员在征得玩家以及管理组同意的情况下，可以使用`/villagershop setAdmin <shopnumber>`[^1]来将该商店转化为系统商店。**注意，该操作也不会返还库存。**  
 
 ## 四、收购相关
 
-目前收购改为实体商店收购，仍在实现中。  
-收购价格为系统商店在售价格的**80%**  
+仅管理员可创建收购商店，在创建时将`<type>`参数设置为1即可创建**无限**收购指定物品的商店。  
+收购价格由使用者自行设定。  
 
 ## 五、其他
 
@@ -102,7 +103,10 @@ f(x) = p \times c \times t
  - [ ] 补货时可以从玩家身上的潜影盒中获取所需物品  
  - [ ] 系统商店限制单个玩家购买数量  
  - [x] 支持范围搜索商店，以及通过玩家名称搜索商店，不输出重复结果。  
- - [ ] 完成商店的实体创建  
- - [ ] 完成GUI呈现以及操作监听  
+ - [x] 完成商店的实体创建  
+ - [x] 完成GUI呈现以及操作监听
+ - [ ] 支持保存物品NBT
+ - [ ] 将计算公式独立进配置文件
 
 [^1]: 对于该指令，你需要使用`/villagershop confirm`来确定执行。同时，你可以使用`/villagershop cancel`来取消操作，所有操作在60s后都会自动取消。并且，在执行下一个需要确认的操作前，你需要先确认已有的操作。
+[^2]: 仍在开发过程中

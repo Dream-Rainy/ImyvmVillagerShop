@@ -12,7 +12,7 @@
     "sources": "https://github.com/Dream-Rainy/ImyvmVillagerShop"
   },
 
-  "license": "AGPL-3.0",
+  "license": "MIT",
 
   "environment": "*",
   "entrypoints": {
