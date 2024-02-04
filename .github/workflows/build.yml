@@ -36,7 +36,7 @@ jobs:
       - name: build
         uses: gradle/gradle-build-action@v2.4.2
         with:
-          gradle-version: 8.1
+          gradle-version: 8.4
           arguments: build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
