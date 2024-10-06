@@ -2,12 +2,12 @@ package com.imyvm.villagerShop.shops
 
 import net.minecraft.entity.EntityType
 import net.minecraft.entity.passive.VillagerEntity
+import net.minecraft.server.world.ServerWorld
 import net.minecraft.text.Text
 import net.minecraft.util.math.BlockPos
-import net.minecraft.world.World
 
 fun spawnInvulnerableVillager(
-    pos: BlockPos, world: World,
+    pos: BlockPos, world: ServerWorld,
     shopName: String,
     type: Int = 0,
     id: Int

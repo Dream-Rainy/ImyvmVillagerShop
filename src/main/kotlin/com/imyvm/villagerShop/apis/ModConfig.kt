@@ -7,7 +7,7 @@ import com.typesafe.config.Config
 
 
 class ModConfig : HokiConfig("Imyvm_VillagerShop.conf") {
-    companion object{
+    companion object {
         @JvmField
         @ConfigOption
         val LANGUAGE = Option(
@@ -36,9 +36,8 @@ class ModConfig : HokiConfig("Imyvm_VillagerShop.conf") {
         @ConfigOption
         val DATABASE_TYPE = Option(
             "core.database.database",
-            "POSTGRESQL",
-            "Database type, support \"POSTGRESQL\" , \"MYSQL\" , \"ORACLE\" or \"SQLSERVER\"\n" +
-                    "However, only POSTGRESQL tests are available. Other databases are theoretically available."
+            "H2",
+            "Database type, support \"POSTGRESQL\" , \"MYSQL\" or \"H2\""
         ) { obj: Config, path: String? ->
             obj.getString(
                 path
@@ -49,12 +48,9 @@ class ModConfig : HokiConfig("Imyvm_VillagerShop.conf") {
         @ConfigOption
         val DATABASE_URL = Option(
             "core.database.url",
-            "jdbc:postgresql://localhost:5432/imyvmvillagershop",
-            "Database connection URL. \n" +
-                    "If you want to use Mysql, please use \"jdbc:mysql://localhost:3306/imyvmvillagershop\"\n" +
-                    "or Oracle : jdbc:oracle:thin:@//localhost:1521/imyvmvillagershop\n" +
-                    "or SQL Server : jdbc:sqlserver://localhost:32768;databaseName=imyvmvillagershop\n" +
-                    "If none are available, we will generate default SQLite files in the world folder"
+            "localhost:5432/imyvmvillagershop",
+            "Database connection URL.\n" +
+                    "If none are available, we will generate default H2 files in the world folder"
         ) { obj: Config, path: String? ->
             obj.getString(
                 path
@@ -77,7 +73,7 @@ class ModConfig : HokiConfig("Imyvm_VillagerShop.conf") {
         @ConfigOption
         val DATABASE_PASSWORD = Option(
             "core.database.password",
-            "1145141919810",
+            "",
             "Database password."
         ) { obj: Config, path: String? ->
             obj.getString(
