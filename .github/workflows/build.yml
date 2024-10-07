@@ -11,9 +11,7 @@ jobs:
     strategy:
       matrix:
         # Use these Java versions
-        java: [
-          21,    # Current Java LTS & minimum supported by Minecraft
-        ]
+        java: [22]  # Current Java LTS & minimum supported by Minecraft
         # and run on both Linux and Windows
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
@@ -33,15 +31,14 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
-      - name: build
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.8
-          arguments: build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Run build
+        run: ./gradlew build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: capture build artifacts
-        if: ${{ runner.os == 'Linux' && matrix.java == '21' }} # Only upload artifacts built from latest java on one OS
+        if: ${{ runner.os == 'Linux' && matrix.java == '22' }} # Only upload artifacts built from latest java on one OS
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
