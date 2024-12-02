@@ -4,6 +4,8 @@
 
 [![Lisense](https://img.shields.io/github/license/Dream-Rainy/ImyvmVillagerShop?style=for-the-badge)](https://github.com/Dream-Rainy/ImyvmVillagerShop/blob/1.19/LICENSE)![Build](https://img.shields.io/github/actions/workflow/status/Dream-Rainy/ImyvmVillagerShop/build.yml?style=for-the-badge)
 
+已知不兼容模组: [OffersHUD](https://github.com/naari3/offers-hud)
+
 ## 一、配置文件
 文件位置：`config/imyvm_villagershop.conf`
 
@@ -70,7 +72,7 @@ f(x) = p \times c \times t
 创建了一个名为`DreamRain`并出售`樱花树叶`的商店。
 那么，我可以使用`100`货币买到`2`个`樱花树叶`。而不是商店中`樱花树叶`的库存为`2`。
 - 所有商店都有一个唯一的`id`标识符，并且永远不可能重复。
-- 目前商品支持保存NBT（未经充分测试），可能会导致无法获取到指定的物品，无法保留自定义NBT等问题。
+- 目前商品支持保存NBT。
 
 ### 2.系统商店
 

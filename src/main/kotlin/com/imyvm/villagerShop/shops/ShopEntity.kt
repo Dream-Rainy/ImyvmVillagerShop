@@ -1,10 +1,14 @@
 package com.imyvm.villagerShop.shops
 
 import com.imyvm.villagerShop.VillagerShopMain.Companion.itemList
-import com.imyvm.villagerShop.apis.*
+import com.imyvm.villagerShop.apis.DbSettings
+import com.imyvm.villagerShop.apis.EconomyData
+import com.imyvm.villagerShop.apis.ShopService
 import com.imyvm.villagerShop.apis.ShopService.Companion.ShopType
 import com.imyvm.villagerShop.apis.Translator.tr
+import com.imyvm.villagerShop.apis.checkParameterLegality
 import com.imyvm.villagerShop.items.ItemManager
+import com.mojang.brigadier.arguments.DoubleArgumentType.getDouble
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.context.CommandContext
@@ -16,7 +20,6 @@ import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.util.math.BlockPos
-import kotlin.collections.isNotEmpty
 import kotlin.math.pow
 
 class ShopEntity(
@@ -118,11 +121,17 @@ class ShopEntity(
     }
 
     fun getTradedItem(tradeItem: ItemStackArgument): ItemManager? {
-        return this.items.find { it.item.item == tradeItem.item }
+        return this.items.find {
+            it.item.item.value() == tradeItem.item &&
+                    it.item.itemStack.components == tradeItem.createStack(1, false).components
+        }
     }
 
     fun deleteTradedItem(itemToRemove: ItemStackArgument) {
-        this.items.removeIf { it.item.item == itemToRemove.item }
+        this.items.removeIf {
+            it.item.item.value() == itemToRemove.item &&
+                    it.item.itemStack.components == itemToRemove.createStack(1, false).components
+        }
         update()
     }
 
@@ -145,11 +154,11 @@ class ShopEntity(
             }
 
             val item = getItemStackArgument(context, "item")
-            val count = getInteger(context, "count")
-            val price = getInteger(context, "price")
+            val quantitySoldEachTime = getInteger(context, "quantitySoldEachTime")
+            val price = getDouble(context, "price")
 
             for (i in itemList) {
-                if ((i.item == item.item) && i.price.toLong() <= price / count * 0.8) {
+                if ((i.item == item.item) && i.price.toLong() <= price / quantitySoldEachTime * 0.8) {
                     player.sendMessage(tr("commands.shop.create.item.price.toolow", item.item.name))
                     return 0
                 }

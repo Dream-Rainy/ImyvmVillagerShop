@@ -1,10 +1,12 @@
 package com.imyvm.villagerShop.commands
 
+import com.imyvm.hoki.util.CommandUtil
 import com.imyvm.villagerShop.VillagerShopMain
-import com.imyvm.villagerShop.apis.*
 import com.imyvm.villagerShop.apis.ShopService.Companion.ShopType
 import com.imyvm.villagerShop.apis.ShopService.Companion.rangeSearch
 import com.imyvm.villagerShop.apis.Translator.tr
+import com.imyvm.villagerShop.apis.coroutineScope
+import com.imyvm.villagerShop.apis.customScope
 import com.imyvm.villagerShop.items.ItemManager
 import com.imyvm.villagerShop.items.ItemManager.Companion.offerItemToPlayer
 import com.imyvm.villagerShop.items.ItemManager.Companion.removeItemFromInventory
@@ -33,10 +35,7 @@ import net.minecraft.command.argument.ItemStackArgumentType.itemStack
 import net.minecraft.server.command.CommandManager.argument
 import net.minecraft.server.command.CommandManager.literal
 import net.minecraft.server.command.ServerCommandSource
-import net.minecraft.text.ClickEvent
-import net.minecraft.text.Style
 import net.minecraft.text.Text
-import net.minecraft.util.Formatting
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -89,8 +88,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                                         mutableMapOf<String, Int>(Pair("default", 0)),
                                                         context.source.registryManager
                                                     ),
-                                                    player
-                                                    )
+                                                    player)
                                                 ) {
                                                 val action = {
                                                     val newShop = ShopEntity(context)
@@ -163,12 +161,10 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                         context.source.registryManager
                                     ).singleOrNull()
                                     shop?.let {
-                                        it.shopname = getString(context, "shopNameNew")
-                                        it.update()
+                                        shop.shopname = getString(context, "shopNameNew")
+                                        shop.update()
                                         context.source.player?.sendMessage(tr("commands.execute.success"))
-                                    } ?: {
-                                        context.source.player?.sendMessage(tr("commands.shops.none"))
-                                    }
+                                    } ?: context.source.player?.sendMessage(tr("commands.shops.none"))
                                     1
                                 }
                             )
@@ -182,12 +178,10 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                         context.source.registryManager
                                     )
                                     shop?.let {
-                                        it.shopname = getString(context, "shopNameNew")
-                                        it.update()
+                                        shop.shopname = getString(context, "shopNameNew")
+                                        shop.update()
                                         player.sendMessage(tr("commands.execute.success"))
-                                    } ?: {
-                                        player.sendMessage(tr("commands.shops.none"))
-                                    }
+                                    } ?: player.sendMessage(tr("commands.shops.none"))
                                     1
                                 }
                             )
@@ -205,14 +199,12 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                     val newPos = getBlockPos(context, "newShopPos")
 
                                     shop?.let {
-                                        it.posX = newPos.x
-                                        it.posY = newPos.y
-                                        it.posZ = newPos.z
+                                        shop.posX = newPos.x
+                                        shop.posY = newPos.y
+                                        shop.posZ = newPos.z
                                         shopDBService.update(it)
                                         player.sendMessage(tr("commands.execute.success"))
-                                    } ?: {
-                                        player.sendMessage(tr("commands.shops.none"))
-                                    }
+                                    } ?: player.sendMessage(tr("commands.shops.none"))
                                     1
                                 }
                             )
@@ -229,14 +221,12 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                     val newPos = getBlockPos(context, "newShopPos")
 
                                     shop?.let {
-                                        it.posX = newPos.x
-                                        it.posY = newPos.y
-                                        it.posZ = newPos.z
-                                        it.update()
+                                        shop.posX = newPos.x
+                                        shop.posY = newPos.y
+                                        shop.posZ = newPos.z
+                                        shop.update()
                                         player.sendMessage(tr("commands.execute.success"))
-                                    } ?: {
-                                        player.sendMessage(tr("commands.shops.none"))
-                                    }
+                                    } ?: player.sendMessage(tr("commands.shops.none"))
                                     1
                                 }
                             )
@@ -254,13 +244,11 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             val player = context.source.player!!
                             shop?.let {
                                 val action = {
-                                    it.delete()
+                                    shop.delete()
                                     player.sendMessage(tr("commands.deleteshop.ok"))
                                 }
                                 addPendingOperation(context, action)
-                            } ?: {
-                                player.sendMessage(tr("commands.shops.none"))
-                            }
+                            } ?: player.sendMessage(tr("commands.shops.none"))
                             1
                         }
                     )
@@ -275,13 +263,11 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             shop?.let {
                                 val action = {
                                     offerItemToPlayer(player, it.items)
-                                    it.delete()
+                                    shop.delete()
                                     player.sendMessage(tr("commands.deleteshop.ok"))
                                 }
                                 addPendingOperation(context, action)
-                            } ?: {
-                                player.sendMessage(tr("commands.shops.none"))
-                            }
+                            } ?: player.sendMessage(tr("commands.shops.none"))
                             1
                         }
                     )
@@ -306,11 +292,9 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                 getInteger(context, "id"),
                                 context.source.registryManager
                             )
-                            if (shop == null) {
-                                player.sendMessage(tr("commands.search.none"))
-                            } else {
+                            shop?.let {
                                 shop.info(player)
-                            }
+                            } ?: player.sendMessage(tr("commands.search.none"))
                             1
                         }
                     )
@@ -325,12 +309,12 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                             )
                             shop?.let {
                                 val action = {
-                                    it.setAdmin()
+                                    shop.setAdmin()
                                     val textSupplier = Supplier<Text> { tr("commands.setadmin.ok") }
                                     context.source.sendFeedback(textSupplier,true)
                                 }
                                 addPendingOperation(context, action)
-                            } ?: {
+                            } ?: run {
                                 val textSupplier = Supplier<Text> { tr("commands.shops.none") }
                                 context.source.sendFeedback(textSupplier,true)
                             }
@@ -350,15 +334,13 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                         val world = context.source.world
                         val player = context.source.player!!
                         shop?.let {
-                            if (world.registryKey.value.toString() == it.world) {
-                                it.spawnOrRespawn(world)
+                            if (world.registryKey.value.toString() == shop.world) {
+                                shop.spawnOrRespawn(world)
                                 player.sendMessage(tr("commands.execute.success"))
                             } else {
                                 player.sendMessage(tr("commands.failed"))
                             }
-                        } ?: {
-                            player.sendMessage(tr("commands.search.none"))
-                        }
+                        } ?: player.sendMessage(tr("commands.search.none"))
                         1
                     }
                 )
@@ -375,24 +357,23 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                     context.source.registryManager
                                 ).firstOrNull()
                                 shop?.let {
-                                    val tradeNeedChange = it.getTradedItem(getItemStackArgument(context, "item"))
-                                    val stockToAdd = removeItemFromInventory(
-                                        player,
-                                        getItemStackArgument(context, "item").createStack(1, false),
-                                        player.inventory.count(getItemStackArgument(context, "item").item)
-                                    )
+                                    val tradeNeedChange = shop.getTradedItem(getItemStackArgument(context, "item"))
                                     tradeNeedChange?.let {
-                                        it.stock["default"]?.let { it1 -> it.stock["default"] = it1 + stockToAdd }
-                                    } ?: {
-                                        player.sendMessage(tr("commands.shop.create.no_item"))
-                                    }
-                                    it.update()
-                                } ?: {
-                                    player.sendMessage(tr("commands.shops.none"))
-                                }
+                                        val stockToAdd = removeItemFromInventory(
+                                            player,
+                                            getItemStackArgument(context, "item").createStack(1, false),
+                                            player.inventory.count(getItemStackArgument(context, "item").item)
+                                        )
+                                        tradeNeedChange.stock["default"]?.let { stock ->
+                                            if (stock == -1) stockToAdd+1
+                                            tradeNeedChange.stock["default"] = stock + stockToAdd
+                                        }
+                                        shop.update()
+                                    } ?: player.sendMessage(tr("commands.shop.create.no_item"))
+                                } ?: player.sendMessage(tr("commands.shops.none"))
                                 1
                             }
-                            .then(argument("quantitySoldEachTime", integer(1))
+                            .then(argument("addedStock", integer(1))
                                 .executes { context ->
                                     val player = context.source.player!!
                                     val shop = shopDBService.readByShopName(
@@ -401,21 +382,17 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                         context.source.registryManager
                                     ).firstOrNull()
                                     shop?.let {
-                                        val tradeNeedChange = it.getTradedItem(getItemStackArgument(context, "item"))
-                                        val stockToAdd = removeItemFromInventory(
-                                            player,
-                                            getItemStackArgument(context, "item").createStack(1, false),
-                                            getInteger(context, "quantitySoldEachTime")
-                                        )
+                                        val tradeNeedChange = shop.getTradedItem(getItemStackArgument(context, "item"))
                                         tradeNeedChange?.let {
-                                            it.stock["default"]?.let { it1 -> it.stock["default"] = it1 + stockToAdd }
-                                        } ?: {
-                                            player.sendMessage(tr("commands.shop.create.no_item"))
-                                        }
-                                        it.update()
-                                    } ?: {
-                                        player.sendMessage(tr("commands.shops.none"))
-                                    }
+                                            val stockToAdd = removeItemFromInventory(
+                                                player,
+                                                getItemStackArgument(context, "item").createStack(1, false),
+                                                getInteger(context, "addedStock")
+                                            )
+                                            tradeNeedChange.stock["default"]?.let { stock -> tradeNeedChange.stock["default"] = stock + stockToAdd }
+                                            shop.update()
+                                        } ?: player.sendMessage(tr("commands.shop.create.no_item"))
+                                    } ?: player.sendMessage(tr("commands.shops.none"))
                                     1
                                 }
                             )
@@ -445,9 +422,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                             if (checkCanAddTradeOffer(it, newTradedItem, player)) {
                                                 it.addTradeOffer(newTradedItem, player)
                                             }
-                                        } ?: {
-                                            player.sendMessage(tr("commands.shops.none"))
-                                        }
+                                        } ?: player.sendMessage(tr("commands.shops.none"))
                                         1
                                     }
                                 )
@@ -476,9 +451,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                         it.delete()
                                     }
                                     addPendingOperation(context, action)
-                                } ?: {
-                                    player.sendMessage(tr("commands.shops.none"))
-                                }
+                                } ?: player.sendMessage(tr("commands.shops.none"))
                                 1
                             }
                         )
@@ -503,9 +476,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                                                 it.count = getInteger(context, "quantitySoldEachTime")
                                                 it.price = getDouble(context, "price")
                                                 player.sendMessage(tr("commands.shop.item.change.success"))
-                                            } ?: {
-                                                player.sendMessage(tr("commands.shop.item.none"))
-                                            }
+                                            } ?: player.sendMessage(tr("commands.shop.item.none"))
                                             it.update()
                                         }
                                         1
@@ -524,7 +495,7 @@ fun register(dispatcher: CommandDispatcher<ServerCommandSource>,
                         it.operation()
                         val textSupplier = Supplier<Text> { tr("commands.confirm.ok") }
                         context.source.sendFeedback(textSupplier, false)
-                    } ?: {
+                    } ?: run {
                         val textSupplier = Supplier<Text> { tr("commands.confirm.none") }
                         context.source.sendFeedback(textSupplier, false)
                     }
@@ -557,15 +528,8 @@ private fun addPendingOperation(context: CommandContext<ServerCommandSource>, op
         context.source.sendError(tr("commands.confirm.already.have"))
     } else {
         pendingOperations[playerUUID] = PendingOperation(playerUUID, operation)
-        player.sendMessage(
-            Text.translatable("commands.confirm.need",
-                Text.literal("/villagerShop confirm")
-                    .setStyle(Style.EMPTY.withColor(Formatting.GREEN)
-                        .withClickEvent(ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/villagerShop confirm"))
-                        .withUnderline(true)
-                    )
-            )
-        )
+        val command = CommandUtil.getSuggestCommandText("/villagerShop confirm")
+        player.sendMessage(tr("commands.confirm.need", command))
         coroutineScope(context)
     }
 }

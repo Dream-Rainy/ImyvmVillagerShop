@@ -37,16 +37,16 @@ public abstract class VirtualMerchantScreenHandlerMixin {
         if (this.merchant.getOffers().size() > tradeIndex && this.merchant.getOffers().get(tradeIndex).getFirstBuyItem().item().value() == Items.BAMBOO) {
             var imyvmCurry = this.merchant.getOffers().get(tradeIndex).getFirstBuyItem().itemStack();
             this.merchantInventory.setStack(0, imyvmCurry);
-            var barrierItem = Registries.ITEM.getOrEmpty(Identifier.tryParse("minecraft:barrier")).orElseThrow();
-            var barrierItemStack = barrierItem.getDefaultStack();
-            barrierItemStack.set(DataComponentTypes.CUSTOM_NAME, Translator.INSTANCE.tr("shop.buy.failed.lack"));
-            barrierItemStack.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
             var customData = imyvmCurry.get(DataComponentTypes.CUSTOM_DATA);
-            if (customData != null && customData.contains("imyvmCurry")) {
+            if (customData != null && customData.contains("securityCode")) {
                 var moneyShouldTake = imyvmCurry.get(DataComponentTypes.DAMAGE);
                 var player = this.getGui().getPlayer();
                 var playerBalance = EconomyMod.data.getOrCreate(player).getMoney();
                 if (moneyShouldTake != null && playerBalance < moneyShouldTake * 100) {
+                    var barrierItem = Registries.ITEM.getOrEmpty(Identifier.tryParse("minecraft:barrier")).orElseThrow();
+                    var barrierItemStack = barrierItem.getDefaultStack();
+                    barrierItemStack.set(DataComponentTypes.CUSTOM_NAME, Translator.INSTANCE.tr("shop.buy.failed.lack"));
+                    barrierItemStack.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
                     this.merchantInventory.setStack(1, barrierItemStack);
                 }
             }
@@ -59,7 +59,7 @@ public abstract class VirtualMerchantScreenHandlerMixin {
         if (!playerEntity.getWorld().isClient && playerEntity instanceof ServerPlayerEntity) {
             var firstItemStack = this.merchantInventory.getStack(0);
             var firstItemStackCustomData = firstItemStack.get(DataComponentTypes.CUSTOM_DATA);
-            if (firstItemStack.getItem() == Items.BAMBOO && firstItemStackCustomData != null && firstItemStackCustomData.contains("imyvmCurry")) {
+            if (firstItemStack.getItem() == Items.BAMBOO && firstItemStackCustomData != null && firstItemStackCustomData.contains("securityCode")) {
                 this.merchantInventory.removeStack(0);
                 this.merchantInventory.removeStack(1);
                 this.merchantInventory.removeStack(2);

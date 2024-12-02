@@ -40,16 +40,16 @@ class ShopGui(private val playerEntity: ServerPlayerEntity, private val registri
                 if (shopEntity?.type == ShopType.SELL || shopEntity?.type == ShopType.REFRESHABLE_SELL) { // Sell
                     val imyvmCurry = this.merchantInventory.getStack(0)
                     val moneyShouldTake = imyvmCurry.get(DataComponentTypes.CUSTOM_DATA)?.copyNbt()?.getDouble("price") ?: return false
-                    val stock = imyvmCurry.get(DataComponentTypes.REPAIR_COST) ?: return false
+                    val stock = this.selectedTrade.maxUses - this.selectedTrade.uses
                     val sellItem = this.merchantInventory.getStack(2)
-                    if (stock == 0) {
-                        return false
-                        this.close()
+                    if (stock <= 0) {
+                        this.merchantInventory.removeStack(0)
                         player.sendMessage(tr("shop.buy.stock.lack"))
+                        return false
                     }
                     val economyData = EconomyData(player)
                     val playerBalance = economyData.getMoney()
-                    var tradeNumber = if (action == SlotActionType.PICKUP && playerBalance >= moneyShouldTake) {
+                    val tradeTimes = if (action == SlotActionType.PICKUP && playerBalance >= moneyShouldTake) {
                         1
                     } else if (action == SlotActionType.QUICK_MOVE) {
                         if (playerBalance/moneyShouldTake >= 64) {
@@ -60,8 +60,10 @@ class ShopGui(private val playerEntity: ServerPlayerEntity, private val registri
                     } else {
                         return false
                     }
-                    if (tradeNumber > stock) {
-                        tradeNumber = stock
+                    val tradeNumber = if (tradeTimes * sellItem.count >= stock) {
+                        stock
+                    } else {
+                        tradeTimes * sellItem.count
                     }
                     shopEntity?.items?.find { it.item.itemStack.isOf(sellItem.item) }?.let { itemEntry ->
                         if (shopEntity?.admin == 0) {
@@ -72,41 +74,40 @@ class ShopGui(private val playerEntity: ServerPlayerEntity, private val registri
                             } - tradeNumber
                         }
                     }
-                    economyData.addMoney((-moneyShouldTake * 100 * tradeNumber).toLong())
-                    sellItem.count = tradeNumber * sellItem.count
+                    economyData.addMoney((-moneyShouldTake * 100 * tradeTimes).toLong())
+                    sellItem.count = tradeNumber
                     player.inventory.offerOrDrop(sellItem)
-                    player.sendMessage(tr("shop.buy.success", moneyShouldTake*tradeNumber, tradeNumber, sellItem.toHoverableText()))
-
-                    imyvmCurry.set(DataComponentTypes.REPAIR_COST, stock-tradeNumber)
-                    this.merchantInventory.setStack(0, imyvmCurry)
+                    repeat(tradeNumber) { this.selectedTrade.use() }
+                    player.sendMessage(tr("shop.buy.success", moneyShouldTake*tradeTimes, tradeNumber, this.selectedTrade?.sellItem?.toHoverableText()))
+                    this.sendUpdate()
                 } else { // Buy
                     val imyvmCurry = this.merchantInventory.getStack(2)
                     val moneyShouldGet = imyvmCurry.get(DataComponentTypes.CUSTOM_DATA)?.copyNbt()?.getDouble("price") ?: return false
-                    val stock = imyvmCurry.get(DataComponentTypes.REPAIR_COST) ?: return false
+                    val stock = this.selectedTrade.maxUses - this.selectedTrade.uses
                     val buyItem = this.merchantInventory.getStack(0)
                     val economyData = EconomyData(player)
                     val playerBalance = economyData.getMoney()
-                    var sellNumber = if (action == SlotActionType.PICKUP && playerBalance >= moneyShouldGet) {
+                    val sellTimes = if (action == SlotActionType.PICKUP && playerBalance >= moneyShouldGet) {
                         1
                     } else if (action == SlotActionType.QUICK_MOVE) {
                         (player.inventory.count(buyItem.item)/buyItem.count).toInt()
                     } else {
                         return false
                     }
-                    buyItem.count = sellNumber * buyItem.count
+                    val sellNumber = sellTimes * buyItem.count
+                    buyItem.count = sellNumber
                     player.inventory.removeOne(buyItem)
                     shopEntity?.items?.find { it.item.itemStack.isOf(buyItem.item) }?.let { itemEntry ->
                         itemEntry.stock[player.uuid.toString()] = itemEntry.stock.getOrPut(player.uuid.toString()) {
                             stock
                         } - sellNumber
                     }
-                    economyData.addMoney((moneyShouldGet * 100 * sellNumber).toLong())
-                    player.sendMessage(tr("shop.purchase.success", moneyShouldGet*sellNumber))
-
-                    imyvmCurry.set(DataComponentTypes.REPAIR_COST, stock-sellNumber)
-                    this.merchantInventory.setStack(2, imyvmCurry)
+                    economyData.addMoney((moneyShouldGet * 100 * sellTimes).toLong())
+                    repeat(sellNumber) { this.selectedTrade.use() }
+                    player.sendMessage(tr("shop.purchase.success", moneyShouldGet*sellTimes))
+                    this.sendUpdate()
                 }
-
+                shopEntity?.update()
             }
             return super.onAnyClick(index, type, action)
         }
@@ -160,8 +161,8 @@ class ShopGui(private val playerEntity: ServerPlayerEntity, private val registri
 
             // Set currency
 
-            val itemStack = ItemStack(Items.BAMBOO)
-            itemStack.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true)
+            val currencyItemStack = ItemStack(Items.BAMBOO)
+            currencyItemStack.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true)
             val lore = LoreComponent(
                 listOf(
                     tr("shop.curry.lore_1"),
@@ -171,32 +172,32 @@ class ShopGui(private val playerEntity: ServerPlayerEntity, private val registri
                 )
             )
             val sellItemName = tr("shop.curry.displayname", items.price)
-            itemStack.set(DataComponentTypes.CUSTOM_NAME, sellItemName)
-            itemStack.set(DataComponentTypes.LORE, lore)
-            itemStack.set(DataComponentTypes.REPAIR_COST, stock)
+            currencyItemStack.set(DataComponentTypes.CUSTOM_NAME, sellItemName)
+            currencyItemStack.set(DataComponentTypes.LORE, lore)
+            currencyItemStack.set(DataComponentTypes.REPAIR_COST, stock)
             val nbtTemp = NbtCompound()
             nbtTemp.putDouble("price", items.price)
             val localDate = LocalDate.now()
             nbtTemp.putString("securityCode",
                 Random(localDate.year + localDate.dayOfYear + localDate.monthValue + items.count + stock + Random.nextInt()).nextInt().toString()
             )
-            itemStack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbtTemp))
-            val buyItem = TradedItem(
+            currencyItemStack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbtTemp))
+            val currencyItem = TradedItem(
                 Registries.ITEM.getEntry(Registries.ITEM.getKey(Items.BAMBOO).get()).get(),
-                items.count, ComponentPredicate.of(itemStack.components), itemStack
+                1, ComponentPredicate.of(currencyItemStack.components), currencyItemStack
             )
 
             val sellItem = items.item
             if (type == 0) {
                 val tradeOffer =
                     if (stock >= items.count) {
-                        TradeOffer(buyItem, sellItem.itemStack, stock, 0 ,0f)
+                        TradeOffer(currencyItem, sellItem.itemStack, stock, 0 ,0f)
                     } else {
-                        TradeOffer(buyItem, sellItem.itemStack, 0, 0, 0f)
+                        TradeOffer(currencyItem, sellItem.itemStack, 0, 0, 0f)
                     }
                 gui.addTrade(tradeOffer)
             } else {
-                gui.addTrade(TradeOffer(sellItem, buyItem.itemStack, stock, 0, 0f))
+                gui.addTrade(TradeOffer(sellItem, currencyItem.itemStack, stock, 0, 0f))
             }
         }
 

@@ -7,7 +7,7 @@
   "commands.cancel.ok": "Operation canceled",
   "commands.confirm.already.have": "You already have an operation waiting for confirmation, please confirm or cancel first",
   "commands.confirm.autocancel": "The pending confirmation operation has been automatically canceled",
-  "commands.confirm.need": "Please enter %s to confirm the operation",
+  "commands.confirm.need": "Please enter {0} to confirm the operation",
   "commands.confirm.none": "No action pending",
   "commands.confirm.ok": "Operation confirmed",
   "commands.deleteshop.ok": "Shop deleted successfully",

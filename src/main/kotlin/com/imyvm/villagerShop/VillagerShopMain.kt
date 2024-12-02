@@ -1,6 +1,8 @@
 package com.imyvm.villagerShop
 
-import com.imyvm.villagerShop.apis.*
+import com.imyvm.villagerShop.apis.EconomyData
+import com.imyvm.villagerShop.apis.ModConfig
+import com.imyvm.villagerShop.apis.ShopService
 import com.imyvm.villagerShop.apis.ShopService.Companion.resetRefreshableSellAndBuy
 import com.imyvm.villagerShop.apis.Translator.tr
 import com.imyvm.villagerShop.commands.register
@@ -27,11 +29,12 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 
 class VillagerShopMain : ModInitializer {
-	val scheduler = Executors.newScheduledThreadPool(1)
+	val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 	override fun onInitialize() {
 		CONFIG.loadAndSave()
 		CommandRegistrationCallback.EVENT.register { dispatcher, commandRegistryAccess, _ ->

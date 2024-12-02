@@ -7,7 +7,7 @@
   "commands.cancel.ok": "任务取消",
   "commands.confirm.already.have": "你已经有一个待确认的任务, 请先将该任务确认或取消",
   "commands.confirm.autocancel": "操作确认已超时，现自动取消",
-  "commands.confirm.need": "请输入 %s 来确认操作",
+  "commands.confirm.need": "请输入 {0} 来确认操作",
   "commands.confirm.none": "没有要确认的操作",
   "commands.confirm.ok": "确认操作",
   "commands.deleteshop.ok": "商店删除成功",

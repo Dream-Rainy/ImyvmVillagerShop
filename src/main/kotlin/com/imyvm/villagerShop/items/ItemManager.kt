@@ -14,7 +14,6 @@ import net.minecraft.registry.RegistryWrapper
 import net.minecraft.village.TradedItem
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.min
-import kotlin.ranges.until
 
 class ItemManager(
     var item: TradedItem,
@@ -56,27 +55,27 @@ class ItemManager(
     companion object {
         fun removeItemFromInventory(player: PlayerEntity, itemToRemove: ItemStack, quantity: Int) :Int {
             val inventory = player.inventory
-            var count = quantity
+            val needAddStock = if (quantity <= player.inventory.count(itemToRemove.item)) {
+                quantity
+            } else {
+                player.inventory.count(itemToRemove.item)
+            }
+            var addedStock = 0
             for (i in 0 until inventory.size()) {
                 val currentItem = inventory.getStack(i)
                 if (currentItem.components == itemToRemove.components) {
-                    val itemsToRemoveFromSlot = min(count, currentItem.count)
+                    val itemsToRemoveFromSlot = min(needAddStock-addedStock, currentItem.count)
                     currentItem.decrement(itemsToRemoveFromSlot)
-                    if (itemsToRemoveFromSlot == count) {
-                        player.sendMessage(tr("commands.stock.add.ok", count))
-                        return 1
+                    if (itemsToRemoveFromSlot == needAddStock-addedStock) {
+                        player.sendMessage(tr("commands.stock.add.ok", needAddStock))
+                        return needAddStock
                     } else {
-                        count -= itemsToRemoveFromSlot
+                        addedStock += itemsToRemoveFromSlot
                     }
                 }
             }
-            if ( count != 0 ) {
-                itemToRemove.count = quantity - count
-                inventory.offerOrDrop(itemToRemove)
-                return -1
-            }
-            player.sendMessage(tr("commands.stock.add.ok", count))
-            return 1
+            player.sendMessage(tr("commands.stock.add.ok", addedStock))
+            return addedStock
         }
 
         fun offerItemToPlayer(player: PlayerEntity, itemToGiveList: MutableList<ItemManager>) {
